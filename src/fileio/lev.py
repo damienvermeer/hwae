@@ -212,14 +212,17 @@ class LevFile:
         # Add config data size
         self.header.end_of_last_bit = offset + len(self.config_data)
 
+        # Create output path and ensure directory exists
+        output_path = os.path.join(save_in_folder, file_name)
+        os.makedirs(save_in_folder, exist_ok=True)
+
         # delete the file if it already exists
-        full_path = save_in_folder + os.sep + file_name
-        if os.path.exists(full_path):
-            os.remove(full_path)
-            logging.info(f"Deleted existing file: {full_path}")
+        if os.path.exists(output_path):
+            os.remove(output_path)
+            logging.info(f"Deleted existing file: {output_path}")
 
         # open the file in the location
-        with open(full_path, "wb") as f:
+        with open(output_path, "wb") as f:
             # pack and write the header
             f.write(self.header.pack())
             logging.info("Wrote header")
@@ -245,4 +248,4 @@ class LevFile:
             f.write(self.config_data)
             logging.info(f"Wrote {len(self.config_data)} bytes of config data")
 
-        logging.info(f"Successfully saved LEV file to: {full_path}")
+        logging.info(f"Successfully saved LEV file to: {output_path}")

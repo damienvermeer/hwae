@@ -59,6 +59,72 @@ class CfgFile:
         if current_record is not None:
             self.records.append(current_record)
 
+    def get(self, section: str) -> str:
+        """Gets the specified section (if it exists) from the loaded cfg file
+
+        Returns None if the section doesn't exist
+
+        Args:
+            section (str): Section to get
+
+        Returns:
+            str: Value of the section, or None if it doesn't exist
+        """
+        for record in self.records:
+            if record.section == section:
+                return "\n".join(record.value)
+        return None
+
+    def set(self, section: str, value: str) -> None:
+        """Sets the specified section to the specified value
+
+        Args:
+            section (str): Section to set
+            value (str): Value to set it to
+        """
+        for record in self.records:
+            if record.section == section:
+                record.value = value
+                return
+        # Section doesn't exist, add it
+        self.records.append(_CfgRecord(section, [value]))
+
+    def __getitem__(self, section: str) -> str:
+        """Gets a section value using dictionary style access
+        
+        Args:
+            section (str): Section name to get
+            
+        Returns:
+            str: The joined value of the section
+            
+        Raises:
+            KeyError: If the section doesn't exist
+        """
+        for record in self.records:
+            if record.section == section:
+                return "\n".join(record.value)
+        raise KeyError(f"Section '{section}' not found")
+
+    def __setitem__(self, section: str, value: str) -> None:
+        """Sets a section value using dictionary style access
+        
+        Args:
+            section (str): Section name to set
+            value (str): Value to set. Will be split into lines if it contains newlines.
+        """
+        # Convert value to list of lines if it contains newlines
+        value_lines = value.split("\n") if isinstance(value, str) else [str(value)]
+        
+        # Try to find and update existing section
+        for record in self.records:
+            if record.section == section:
+                record.value = value_lines
+                return
+                
+        # Section doesn't exist, append new one
+        self.records.append(_CfgRecord(section, value_lines))
+
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Saves the CFG file to the specified path, using the data stored
         in this instance
@@ -71,8 +137,9 @@ class CfgFile:
             file_name += ".cfg"
         logging.info(f"Saving CFG file to: {save_in_folder}/{file_name}")
 
-        # Create output path
+        # Create output path and ensure directory exists
         output_path = os.path.join(save_in_folder, file_name)
+        os.makedirs(save_in_folder, exist_ok=True)
 
         # Write the file
         with open(output_path, "w") as f:
