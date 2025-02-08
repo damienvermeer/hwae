@@ -1,7 +1,7 @@
 """
 HWAE (Hostile Waters Antaeus Eternal)
 
-src.io.lev
+fileio.lev
 
 Contains all info to read and write HWAR's .lev file type
 """
@@ -182,6 +182,8 @@ class LevFile:
             save_in_folder (str): Location to save the file to
             file_name (str): Name of the file to save as
         """
+        if not file_name.endswith(".lev"):
+            file_name += ".lev"
         logging.info(f"Saving LEV file to: {save_in_folder}/{file_name}")
 
         # Calculate initial offset after header
