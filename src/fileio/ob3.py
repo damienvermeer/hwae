@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 import logging
 import os
 import numpy as np
-from typing import List
+from typing import List, Union
 
 # NOTE: the 'f' after '12f' should be a bool (1 byte) - but seems to be a
 # ... float in several levels. I'm not even sure what this float/bool is for?
@@ -27,33 +27,55 @@ class _OB3Object:
     """Represents an object present in the ob3 file."""
 
     object_size_in_bytes: int = 148
-    object_type: bytes = b""
-    attachment_type: bytes = b""
-    # rotation matrix
-    r1_a: float = 0.0
+    object_type: Union[bytes, str] = b""
+    attachment_type: Union[bytes, str] = b""
+    # rotation matrix (default to identity 3x3 matrix)
+    r1_a: float = 1.0
     r1_b: float = 0.0
     r1_c: float = 0.0
     r2_a: float = 0.0
-    r2_b: float = 0.0
+    r2_b: float = 1.0
     r2_c: float = 0.0
     r3_a: float = 0.0
     r3_b: float = 0.0
-    r3_c: float = 0.0
+    r3_c: float = 1.0
     # location floats
     _loc_x: float = 0.0
     _loc_y: float = 0.0
     _loc_z: float = 0.0
-    normal: float = 0.0
-    renderable_id: int = 0
+    normal: float = 1.0  # no idea what this is for
+    # other info
+    renderable_id: int = -1  # not sure what for, default 0 - but if -1 set to my id
     controllable_id: int = 0
-    shadow_flags: int = 0
-    permanent_flag: int = 0
+    shadow_flags: int = 139  # not sure what this means
+    permanent_flag: int = 1  # not sure what this means
     team_number: int = 0
     extra_data: bytes = b""
     my_id: int = 0
 
     def __post_init__(self) -> None:
         """Post constructor - clean up some of the info we dumped into the constructor"""
+        # actions here are ONLY required when loading from ob3 file
+        # convert from silly units to nice x y z units
+        self._loc_x /= MAP_SCALER
+        self._loc_y /= MAP_SCALER
+        self._loc_z /= MAP_SCALER
+        # check if the object and attachment types are bytes, if so, decode
+        # ... remove null bytes, strip and convert to string
+        if isinstance(self.object_type, bytes):
+            self.object_type = self.object_type.rstrip(b"\x00").decode("ascii")
+        if isinstance(self.attachment_type, bytes):
+            self.attachment_type = self.attachment_type.rstrip(b"\x00").decode("ascii")
+        # complete other steps
+        self.clean_object()
+
+    def clean_object(self) -> None:
+        """Completes post-creation steps (create location vector, rotation matrix, etc.)
+
+        Required to be re-triggered only if creating an object from scratch
+        """
+        # make location vector
+        self.location = np.array([self._loc_x, self._loc_y, self._loc_z])
         # make nice rotation matrix
         self.rotation_matrix = np.array(
             [
@@ -62,16 +84,9 @@ class _OB3Object:
                 [self.r3_a, self.r3_b, self.r3_c],
             ]
         )
-        # convert from silly units to nice x y z units
-        self._loc_x /= MAP_SCALER
-        self._loc_y /= MAP_SCALER
-        self._loc_z /= MAP_SCALER
-        # make location vector
-        self.location = np.array([self._loc_x, self._loc_y, self._loc_z])
-        # remove null bytes, strip and convert to string
-        self.object_type = self.object_type.rstrip(b"\x00").decode("ascii")
-        self.attachment_type = self.attachment_type.rstrip(b"\x00").decode("ascii")
-        # normal is bool, but seems to being stored as a float. TODO do we convert?
+        # check if renderable_id is -1 - this means set it the same as my_id
+        if self.renderable_id == -1:
+            self.renderable_id = self.my_id
 
     def pack(self) -> bytes:
         """Pack object into bytes for saving back to OB3"""
@@ -122,7 +137,13 @@ class Ob3File:
     objects: List[_OB3Object] = field(default_factory=list)
 
     def __post_init__(self):
-        """Load objects from ob3 file"""
+        """Load objects from ob3 file if one exists, if path
+        is blank then create one from scratch"""
+        if not self.full_file_path:
+            # nothing special requried to create a container ob3 file,
+            # ... its just an empty list of objects
+            logging.info("OB3: Created empty container")
+            return
 
         with open(self.full_file_path, "rb") as f:
             # Read OBJC header and discard
@@ -139,22 +160,57 @@ class Ob3File:
                 # calculate the addon 'extra' size (we dont currently support addons)
                 # ... so this goes into the pad bytes below
                 extra_data_size = length_of_object_size - 140
-                # unpack directly into the _OB3Object() constructor
-                self.objects.append(
-                    _OB3Object(
-                        length_of_object_size,
-                        *struct.unpack(
-                            f"{OBJECT_DESC_FIXED_SECTION_STRUCT}{extra_data_size:.0f}x",
-                            f.read(length_of_object_size - 4),
-                        ),
-                        # dont bother reading object id from struct - its 0 indexed
-                        # ... so just use the value from the loop
-                        object_id,
-                    )
+                # create the list of args from the data
+                all_args = (
+                    length_of_object_size,
+                    *struct.unpack(
+                        f"{OBJECT_DESC_FIXED_SECTION_STRUCT}{extra_data_size:.0f}x",
+                        f.read(length_of_object_size - 4),
+                    ),
+                    # dont bother reading object id from struct - its 0 indexed
+                    # ... so just use the value from the loop
+                    object_id,
                 )
+                # and add the object
+                self.objects.append(_OB3Object(*all_args))
             logging.info(
                 f"OB3 Read: Finished reading - found {len(self.objects)} objects"
             )
+
+    def add_object(
+        self,
+        object_type: str,
+        location: np.array,
+        attachment_type: str = "",
+        team: int = 1,
+    ) -> None:
+        """Add a new object to the OB3 file.
+
+        Args:
+            object_type (str): Type of the object
+            location (tuple): Location of the object
+            attachment_type (str): Type of attachment
+            team (int): Team number (0=player, 1+=enemy, 0xFF=neutral)
+        """
+        # create a new _OB3Object with its default values
+        new_obj = _OB3Object()
+        # set the object type and location
+        new_obj.object_type = object_type
+        new_obj._loc_x = location[0]
+        new_obj._loc_y = location[1]
+        new_obj._loc_z = location[2]
+        # set attachment type and team
+        new_obj.attachment_type = attachment_type
+        new_obj.team = team
+        new_obj.controllable_id = team == 0  # only controllable if on my team
+        # set its id, which is the next available id
+        new_obj.my_id = len(self.objects)
+        # call clean object (to set location values etc)
+        new_obj.clean_object()
+        self.objects.append(new_obj)
+        logging.info(
+            f"Added new object of type '{object_type}' with ID {new_obj.my_id}"
+        )
 
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Save objects to file
