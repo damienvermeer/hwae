@@ -14,14 +14,15 @@ from fileio.ob3 import Ob3File
 from noisegen import NoiseGenerator
 from objects import ObjectHandler, Team
 from terrain import TerrainHandler
+from minimap import generate_minimap
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
     # load lev
     lev_data = LevFile(r"C:\HWAR\HWAR\modtest2\Level22\level22 original.lev")
     # load cfg
-    cfg_data = CfgFile(r"C:\HWAR\HWAR\modtest2\Level22\level22.cfg")
+    cfg_data = CfgFile(r"C:\HWAR\HWAR\modtest2\Level22\level22 - differentetxtures.cfg")
     # create a blank ob3
     ob3_data = Ob3File("")
     # create a common noise generator
@@ -30,7 +31,6 @@ if __name__ == "__main__":
     # create a terrain handler
     terrain_handler = TerrainHandler(lev_data, noise_generator)
     terrain_handler.set_terrain_from_noise()
-
     # create an objecthandler
     object_handler = ObjectHandler(terrain_handler, ob3_data)
     object_handler.add_object(
@@ -47,6 +47,10 @@ if __name__ == "__main__":
         location_z=256 / 2 + 2,
         y_offset=10,
         team=Team.NEUTRAL,
+    )
+    # create minimap
+    generate_minimap(
+        terrain_handler, cfg_data, r"C:\HWAR\HWAR\modtest2\Level52\map.pcx"
     )
     # save all files
     for file in [lev_data, cfg_data, ob3_data]:
