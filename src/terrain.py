@@ -7,6 +7,8 @@ Contains all info regarding terrain for the level
 """
 
 from dataclasses import dataclass
+import logging
+import noise
 from fileio.lev import LevFile
 from fileio.ob3 import MAP_SCALER
 from noisegen import NoiseGenerator
@@ -40,6 +42,16 @@ class TerrainHandler:
     def set_height(self, x: int, z: int, height: float) -> None:
         self.terrain_points[x, z].height = height
 
+    def get_max_height(self) -> float:
+        return np.max(
+            np.array([[point.height for point in row] for row in self.terrain_points])
+        )
+
+    def get_min_height(self) -> float:
+        return np.min(
+            np.array([[point.height for point in row] for row in self.terrain_points])
+        )
+
     def randomise_texture_dirs(self) -> None:
         """Randomises the texture directions of all textures on the terrain. For
         now, this is an easy way to get some variety.
@@ -51,7 +63,13 @@ class TerrainHandler:
     def _scale_array(
         self, arr: np.ndarray, min_val: float, max_val: float
     ) -> np.ndarray:
-        """Scales a 2D NumPy array to a specified range while maintaining the original distribution.
+        """
+        Scales a 2D NumPy array to a specified range while maintaining the original distribution.
+
+        This function scales the heights of the _LevTerrainPoint objects in the input array
+        to the specified range while maintaining the original distribution. This is done by
+        first finding the current min and max values of the heights, and then scaling the heights
+        to the specified range using a linear transformation.
 
         Args:
             arr (np.ndarray): The 2D NumPy array of _LevTerrainPoint objects
@@ -91,7 +109,10 @@ class TerrainHandler:
         simple implementation, where the height is the value of the noise at the
         corresponding position.
         """
+        logging.info("Starting terrain generation...")
+
         # Step 1 - generate a base map
+        logging.info("Step 1: Generating base noise map...")
         # generate a base noise map with the same dimensions as the map
         noise_map = self.noise_gen.random_noisemap(self.width, self.length, cutoff=0.3)
         for x in range(self.width):
@@ -99,17 +120,19 @@ class TerrainHandler:
                 self.terrain_points[x, y].height = noise_map[x, y]
 
         # Step 2 - load a template map outline, to enforce we get an island
+        logging.info("Step 2: Applying island template...")
         # TODO neater
         script_dir = os.path.dirname(os.path.abspath(__file__))
         mapgen_dir = os.path.join(script_dir, "assets", "mapgen")
         num_mapgen_templates = len(os.listdir(mapgen_dir))
         # pick a mapgen template at random
         mapgen_template = self.noise_gen.randint(0, num_mapgen_templates - 1)
+        logging.info(f"Selected template: {mapgen_template}.png")
         with Image.open(os.path.join(mapgen_dir, f"{mapgen_template}.png")) as fimg:
             # rotate by a random angle
-            img = fimg.rotate(
-                self.noise_gen.randint(0, 360), Image.NEAREST, expand=True
-            )
+            angle = self.noise_gen.randint(0, 360)
+            logging.info(f"Rotating template by {angle} degrees")
+            img = fimg.rotate(angle, Image.NEAREST, expand=True)
             # normlaise to [0,1]
             img = img.convert("L")
             img = np.array(img) / 255
@@ -122,16 +145,64 @@ class TerrainHandler:
                     self.terrain_points[x, y].height *= img[x, y]
 
         # Step 3 - scale the terrain based on testing
+        logging.info("Step 3: Scaling terrain heights...")
         self.terrain_points = self._scale_array(self.terrain_points, -1000, 3200)
 
         # Step 4 - apply final cutoff (to remove underwater height changes)
+        logging.info("Step 4: Applying underwater height cutoff...")
         for x in range(self.width):
             for y in range(self.length):
                 if self.terrain_points[x, y].height < -100:
                     self.terrain_points[x, y].height = -100
 
         # Step 5 - remove holes from appearing in the map by setting the flags
+        logging.info("Step 5: Setting terrain flags...")
         # ... of every point to 1
         for x in range(self.width):
             for y in range(self.length):
                 self.terrain_points[x, y].flags = 1  # 'TP_DRAW' mode
+
+        # Step 6 - apply random map textures
+        logging.info("Step 6: Applying terrain textures...")
+        # 1 sea, 1 shore, 5 normal, 1 hill, 1 peak
+        # Step 6a - get a noisemap we will use for the variety in textures, with more
+        # ... noise in it. scale the map between 0 and 4 (integers only)
+        N = 5  # number of 'normal textures'
+        noise_map = self.noise_gen.random_noisemap(
+            self.width, self.length, persistence=1
+        )
+        # Map noise values (0-1) to texture indices (0-N) with decreasing frequency
+        # Create thresholds that give exponentially less space to higher values
+        thresholds = np.array(
+            [0.4, 0.65, 0.8, 0.9, 0.95, 1.0]
+        )  # Each range is smaller than the previous
+        noise_map = np.digitize(noise_map, thresholds)
+
+        # Step 6b - apply the noisemap to the terrain (the terrain_points) with
+        # ... an offset to cover the sea and shore
+        logging.info("Applying base terrain textures...")
+        for x in range(self.width):
+            for y in range(self.length):
+                self.terrain_points[x, y].mat = noise_map[x, y] + 2
+
+        # Step 6c - apply height-bound materials (sea, shore)
+        # logging.info("Applying height-based terrain textures...")
+        # max_height = self.get_max_height()
+        # for x in range(self.width):
+        #     for y in range(self.length):
+        #         if self.terrain_points[x, y].height < -10:
+        #             self.terrain_points[x, y].mat = 0  # sea
+        #             self.terrain_points[x, y].flags = 2  # 'TP_WET' mode
+        #         elif -10 <= self.terrain_points[x, y].height <= 40:
+        #             self.terrain_points[x, y].mat = 1  # shore
+        #         elif self.terrain_points[x, y].height > 0.8 * max_height:
+        #             self.terrain_points[x, y].mat = 5  # hills
+        #         elif self.terrain_points[x, y].height > 0.9 * max_height:
+        #             self.terrain_points[x, y].mat = 6  # peaks
+
+        logging.info("Terrain generation complete!")
+        # TEMP - set all mat points to 2
+        # for x in range(self.width):
+        #     for y in range(self.length):
+        #         self.terrain_points[x, y].mat = 1
+        # END TEMP
