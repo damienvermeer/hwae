@@ -5,12 +5,15 @@ Python package (released as a pyinstaller exe) to generate additional maps for H
 """
 
 import logging
+import numpy as np
 
 from fileio.lev import LevFile
 from fileio.cfg import CfgFile
 from fileio.ob3 import Ob3File
+
+from noisegen import NoiseGenerator
 from objects import ObjectHandler
-import numpy as np
+from terrain import TerrainHandler
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -21,6 +24,13 @@ if __name__ == "__main__":
     cfg_data = CfgFile(r"C:\HWAR\HWAR\modtest2\Level22\level22.cfg")
     # create a blank ob3
     ob3_data = Ob3File("")
+    # create a common noise generator
+    noise_generator = NoiseGenerator(seed=0)
+
+    # create a terrain handler
+    terrain_handler = TerrainHandler(lev_data, noise_generator)
+    terrain_handler.set_terrain_from_noise()
+
     # create an objecthandler
     object_handler = ObjectHandler(ob3_data)
     object_handler.add_object(

@@ -22,7 +22,7 @@ class _LevHeader:
     four_cc: int
     terrain_point_data_offset: int
     width: int
-    height: int
+    length: int
     highest_point: float
     lowest_point: float
     object_list_offset: int
@@ -39,7 +39,7 @@ class _LevHeader:
             self.four_cc,
             self.terrain_point_data_offset,
             self.width,
-            self.height,
+            self.length,
             self.highest_point,
             self.lowest_point,
             self.object_list_offset,
