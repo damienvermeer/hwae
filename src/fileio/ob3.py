@@ -196,15 +196,18 @@ class Ob3File:
         new_obj = _OB3Object()
         # set the object type and location
         new_obj.object_type = object_type
-        new_obj._loc_x = location[0]
+        # NOTE: LEV vs OB3 has different scales. In OB3, the x and z values are
+        # ... in 10x10 units, while in LEV they are 1x1 units. So we need to
+        # ... scale the location values accordingly
+        new_obj._loc_x = location[0] * 10
         new_obj._loc_y = location[1]
-        new_obj._loc_z = location[2]
+        new_obj._loc_z = location[2] * 10
         # set attachment type and team
         new_obj.attachment_type = attachment_type
-        new_obj.team = team
+        new_obj.team_number = team
         new_obj.controllable_id = team == 0  # only controllable if on my team
         # set its id, which is the next available id
-        new_obj.my_id = len(self.objects)
+        new_obj.my_id = new_obj.renderable_id = len(self.objects)
         # call clean object (to set location values etc)
         new_obj.clean_object()
         self.objects.append(new_obj)

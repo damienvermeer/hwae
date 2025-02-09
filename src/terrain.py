@@ -8,6 +8,7 @@ Contains all info regarding terrain for the level
 
 from dataclasses import dataclass
 from fileio.lev import LevFile
+from fileio.ob3 import MAP_SCALER
 from noisegen import NoiseGenerator
 import numpy as np
 import os
@@ -30,11 +31,14 @@ class TerrainHandler:
             (self.width, self.length)
         )
 
-    def get_height(self, x: int, y: int) -> float:
-        return self.terrain_points[x, y].height
+    def get_raw_height(self, x: int, z: int) -> float:
+        return self.terrain_points[x, z].height
 
-    def set_height(self, x: int, y: int, height: float) -> None:
-        self.terrain_points[x, y].height = height
+    def get_height(self, x: int, z: int) -> float:
+        return self.terrain_points[x, z].height / MAP_SCALER
+
+    def set_height(self, x: int, z: int, height: float) -> None:
+        self.terrain_points[x, z].height = height
 
     def randomise_texture_dirs(self) -> None:
         """Randomises the texture directions of all textures on the terrain. For
@@ -118,7 +122,7 @@ class TerrainHandler:
                     self.terrain_points[x, y].height *= img[x, y]
 
         # Step 3 - scale the terrain based on testing
-        self.terrain_points = self._scale_array(self.terrain_points, -1000, 2200)
+        self.terrain_points = self._scale_array(self.terrain_points, -1000, 3200)
 
         # Step 4 - apply final cutoff (to remove underwater height changes)
         for x in range(self.width):
