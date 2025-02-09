@@ -186,19 +186,19 @@ class TerrainHandler:
                 self.terrain_points[x, y].mat = noise_map[x, y] + 2
 
         # Step 6c - apply height-bound materials (sea, shore)
-        # logging.info("Applying height-based terrain textures...")
-        # max_height = self.get_max_height()
-        # for x in range(self.width):
-        #     for y in range(self.length):
-        #         if self.terrain_points[x, y].height < -10:
-        #             self.terrain_points[x, y].mat = 0  # sea
-        #             self.terrain_points[x, y].flags = 2  # 'TP_WET' mode
-        #         elif -10 <= self.terrain_points[x, y].height <= 40:
-        #             self.terrain_points[x, y].mat = 1  # shore
-        #         elif self.terrain_points[x, y].height > 0.8 * max_height:
-        #             self.terrain_points[x, y].mat = 5  # hills
-        #         elif self.terrain_points[x, y].height > 0.9 * max_height:
-        #             self.terrain_points[x, y].mat = 6  # peaks
+        logging.info("Applying height-based terrain textures...")
+        max_height = self.get_max_height()
+        for x in range(self.width):
+            for y in range(self.length):
+                if self.terrain_points[x, y].height < -10:
+                    self.terrain_points[x, y].mat = 0  # sea
+                    self.terrain_points[x, y].flags = 2  # 'TP_WET' mode
+                elif -10 <= self.terrain_points[x, y].height <= 80:
+                    self.terrain_points[x, y].mat = 1  # shore
+                elif self.terrain_points[x, y].height > 0.8 * max_height:
+                    self.terrain_points[x, y].mat = 5  # hills
+                elif self.terrain_points[x, y].height > 0.9 * max_height:
+                    self.terrain_points[x, y].mat = 6  # peaks
 
         logging.info("Terrain generation complete!")
         # TEMP - set all mat points to 2
