@@ -52,14 +52,6 @@ class TerrainHandler:
             np.array([[point.height for point in row] for row in self.terrain_points])
         )
 
-    def randomise_texture_dirs(self) -> None:
-        """Randomises the texture directions of all textures on the terrain. For
-        now, this is an easy way to get some variety.
-        """
-        for x in range(self.width):
-            for y in range(self.length):
-                self.terrain_points[x, y].texture_dir = self.noise_gen.randint(0, 8)
-
     def _scale_array(
         self, arr: np.ndarray, min_val: float, max_val: float
     ) -> np.ndarray:
@@ -152,8 +144,8 @@ class TerrainHandler:
         logging.info("Step 4: Applying underwater height cutoff...")
         for x in range(self.width):
             for y in range(self.length):
-                if self.terrain_points[x, y].height < -100:
-                    self.terrain_points[x, y].height = -100
+                if self.terrain_points[x, y].height < -150:
+                    self.terrain_points[x, y].height = -1500
 
         # Step 5 - remove holes from appearing in the map by setting the flags
         logging.info("Step 5: Setting terrain flags...")
@@ -161,6 +153,8 @@ class TerrainHandler:
         for x in range(self.width):
             for y in range(self.length):
                 self.terrain_points[x, y].flags = 1  # 'TP_DRAW' mode
+                # set each texture a random direction (gives some visual variety)
+                self.terrain_points[x, y].texture_dir = self.noise_gen.randint(0, 8)
 
         # Step 6 - apply random map textures
         logging.info("Step 6: Applying terrain textures...")
