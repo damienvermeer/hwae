@@ -76,15 +76,22 @@ class CfgFile:
                 return record.value
         raise KeyError(f"Section '{section}' not found")
 
-    def __setitem__(self, section: str, value: str) -> None:
+    def __setitem__(self, section: str, value: str | list[str]) -> None:
         """Sets a section value using dictionary style access
 
         Args:
             section (str): Section name to set
-            value (str): Value to set. Will be split into lines if it contains newlines.
+            value (str | list[str]): Value to set. Can be either a string (which will be split into lines if it contains newlines)
+                                    or a list of strings.
         """
-        # Convert value to list of lines if it contains newlines
-        value_lines = value.split("\n") if isinstance(value, str) else [str(value)]
+        # Convert value to list of lines
+        if isinstance(value, str):
+            value_lines = value.split("\n")
+        elif isinstance(value, list):
+            value_lines = value
+        else:
+            value_lines = [str(value)]
+            
         # remove comment lines
         value_lines = [line for line in value_lines if not line.strip().startswith(";")]
 
@@ -96,6 +103,24 @@ class CfgFile:
 
         # Section doesn't exist, append new one
         self.records.append(_CfgRecord(section, value_lines))
+
+    def __str__(self) -> str:
+        """Returns the entire config data as a string
+
+        Returns:
+            str: Config data as a string
+        """
+        # create header
+        return_data = f";Created by HWAE at {time.strftime('%d\\%m\\%Y (%H:%M)')}\n"
+        for record in self.records:
+            # Write section header
+            return_data += f"[{record.section}]\n"
+            # Write section values
+            for value in record.value:
+                return_data += f"{value}\n"
+            # Add blank line between sections
+            return_data += "\n"
+        return return_data
 
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Saves the CFG file to the specified path, using the data stored
@@ -116,14 +141,4 @@ class CfgFile:
         # Write the file
         with open(output_path, "w") as f:
             # Add header comment with timestamp
-            f.write(f";Created by HWAE at {time.strftime('%d\\%m\\%Y (%H:%M)')}\n")
-
-            # Write each section
-            for record in self.records:
-                # Write section header
-                f.write(f"[{record.section}]\n")
-                # Write section values
-                for value in record.value:
-                    f.write(f"{value}\n")
-                # Add blank line between sections
-                f.write("\n")
+            f.write(self.__str__())

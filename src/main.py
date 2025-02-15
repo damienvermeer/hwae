@@ -6,10 +6,12 @@ Python package (released as a pyinstaller exe) to generate additional maps for H
 
 import logging
 import numpy as np
+from pathlib import Path
 
-from fileio.lev import LevFile
 from fileio.cfg import CfgFile
+from fileio.lev import LevFile
 from fileio.ob3 import Ob3File
+from fileio.ars import ArsFile
 
 from noisegen import NoiseGenerator
 from objects import ObjectHandler, Team
@@ -20,18 +22,23 @@ from minimap import generate_minimap
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
-    # load lev
-    lev_data = LevFile(r"C:\HWAR\HWAR\modtest2\Level22\level22 original.lev")
-    # load cfg
-    cfg_data = CfgFile(r"C:\HWAR\HWAR\modtest2\Level22\level22 - differentetxtures.cfg")
-    # create a blank ob3
-    ob3_data = Ob3File("")
-    # create a common noise generator
-    noise_generator = NoiseGenerator(seed=0)
+    # TODO somehow specify the output location
+    NEW_LEVEL_NAME = "Level53"
+    noise_generator = NoiseGenerator(seed=1)
+
+    # TODO select a template
+    # select large template root
+    template_root = Path(__file__).resolve().parent / "assets" / "templates"
+
+    # Create fileio objects we need to create the level
+    cfg_data = CfgFile(template_root / "large.cfg")
+    lev_data = LevFile(template_root / "large.lev")
+    ars_data = ArsFile(template_root / "common.ars")
+    ob3_data = Ob3File("")  # we dont need to load an existing ob3
 
     # select texture group
     select_map_texture_group(
-        cfg_data, noise_generator, r"C:\HWAR\HWAR\modtest2\Level52"
+        cfg_data, noise_generator, rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}"
     )
     # create a terrain handler
     terrain_handler = TerrainHandler(lev_data, noise_generator)
@@ -56,8 +63,8 @@ if __name__ == "__main__":
     )
     # create minimap
     generate_minimap(
-        terrain_handler, cfg_data, r"C:\HWAR\HWAR\modtest2\Level52\map.pcx"
+        terrain_handler, cfg_data, rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}\map.pcx"
     )
     # save all files
-    for file in [lev_data, cfg_data, ob3_data]:
-        file.save(r"C:\HWAR\HWAR\modtest2\Level52", "Level52")
+    for file in [lev_data, cfg_data, ob3_data, ars_data]:
+        file.save(rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}", NEW_LEVEL_NAME)
