@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 if __name__ == "__main__":
     # TODO somehow specify the output location
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=110)
+    noise_generator = NoiseGenerator(seed=113)
 
     # TODO select a template
     # select large template root
@@ -53,15 +53,21 @@ if __name__ == "__main__":
         team=Team.PLAYER,
         y_rotation=y_rotation,
     )
-    object_handler.add_object(
-        "ALIENGROUNDPROD",
-        location=[41, 15, 155],
-        team=Team.PLAYER,
-    )
+    for _ in range(25):
+        object_handler.add_object_on_land_random(
+            "AlienTower" if np.random.random() > 0.5 else "SmallFlyer",
+            team=Team.ENEMY,
+        )
+
+    # object_handler.add_object(
+    #     "ALIENGROUNDPROD",
+    #     location=[41, 15, 155],
+    #     team=Team.PLAYER,
+    # )
     # object_handler.add_object("dedicatedlifter", np.array([95, 15, 100]), team=0)
-    object_handler.add_object_on_ground(
-        "ALIENGROUNDPROD", location_x=256 / 2, location_z=256 / 2, team=1
-    )
+    # object_handler.add_object_on_ground(
+    #     "ALIENGROUNDPROD", location_x=256 / 2, location_z=256 / 2, team=1
+    # )
     # create minimap
     generate_minimap(
         terrain_handler, cfg_data, rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}\map.pcx"

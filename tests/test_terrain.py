@@ -5,40 +5,30 @@ from src.terrain import TerrainHandler
 
 
 @patch("src.terrain.TerrainHandler.__init__", lambda self, *args: None)
+@patch(
+    "src.terrain.TerrainHandler._get_height_2d_array",
+    lambda self, *args: np.array([[0, 1], [1, 4]], dtype=np.float64),
+)
 def test_generate_upscaled_height_array():
-    # create mock point
-    class Point:
-        def __init__(self, h):
-            self.height = h
-
     # Create terrain handler with mock noise generator
     terrain = TerrainHandler()
     terrain.width = 2
     terrain.length = 2
 
-    # Set up test heights in a 2x2 grid:
-    # [0 1]
-    # [1 4]
-    heights = [[0, 1], [1, 4]]
-
-    # Mock the get_height method to return our test data
-    def mock_get_height(x, z):
-        return heights[x][z]
-
-    terrain.get_height = mock_get_height
-
     # Test with scale=3 to create a 6x6 grid
-    result = terrain.generate_upscaled_height_array(scale=3)
+    result, width, length = terrain._generate_upscaled_height_array(scale=3)
     assert result.shape == (6, 6)
+    assert width == 6
+    assert length == 6
 
     print("Result array:")
     print(result)
 
     # Check corner values match original points
-    np.testing.assert_almost_equal(result[0, 0], heights[0][0])  # top-left = 0
-    np.testing.assert_almost_equal(result[0, -1], heights[0][1])  # top-right = 1
-    np.testing.assert_almost_equal(result[-1, 0], heights[1][0])  # bottom-left = 1
-    np.testing.assert_almost_equal(result[-1, -1], heights[1][1])  # bottom-right = 4
+    np.testing.assert_almost_equal(result[0, 0], 0)  # top-left = 0
+    np.testing.assert_almost_equal(result[0, -1], 1)  # top-right = 1
+    np.testing.assert_almost_equal(result[-1, 0], 1)  # bottom-left = 1
+    np.testing.assert_almost_equal(result[-1, -1], 4)  # bottom-right = 4
 
     # Check middle points are correctly interpolated
     # For a 6x6 grid, points are at 0, 0.2, 0.4, 0.6, 0.8, 1.0 of the way across
@@ -48,19 +38,24 @@ def test_generate_upscaled_height_array():
 
 
 @patch("src.terrain.TerrainHandler.__init__", lambda self, *args: None)
+@patch(
+    "src.terrain.TerrainHandler._get_height_2d_array",
+    lambda self, *args: np.array([[0, 1], [1, 4]], dtype=np.float64),
+)
 def test_upscale_downsample_consistency():
     # Create terrain handler
     terrain = TerrainHandler()
     terrain.width = 2
     terrain.length = 2
 
-    # Set up test heights
-    heights = [[0, 1], [1, 4]]
-    terrain.get_height = lambda x, z: heights[x][z]
+    # Original height array
+    original = np.array([[0, 1], [1, 4]], dtype=np.float64)
 
     # Upscale by 2 (creating a 4x4 grid)
-    result = terrain.generate_upscaled_height_array(scale=2)
+    result, width, length = terrain._generate_upscaled_height_array(scale=2)
     assert result.shape == (4, 4)
+    assert width == 4
+    assert length == 4
 
     print("Upscaled array (4x4):")
     print(result)
@@ -70,9 +65,6 @@ def test_upscale_downsample_consistency():
     # So we need to sample at indices 0 and 3 to get original values
     downsampled = result[::3, ::3]
     assert downsampled.shape == (2, 2)
-
-    # Original height array
-    original = np.array(heights)
 
     print("\nDownsampled array (2x2):")
     print(downsampled)

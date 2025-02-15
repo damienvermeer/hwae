@@ -7,14 +7,14 @@ Contains all info regarding objects for the level
 """
 
 from dataclasses import dataclass
+import logging
 import numpy as np
 from enum import IntEnum
 from typing import Union
 
-from fileio.ob3 import Ob3File
-
-from noisegen import NoiseGenerator
-from terrain import TerrainHandler
+from src.fileio.ob3 import Ob3File, MAP_SCALER
+from src.noisegen import NoiseGenerator
+from src.terrain import TerrainHandler
 
 
 class Team(IntEnum):
@@ -91,6 +91,40 @@ class ObjectHandler:
             y_rotation=y_rotation,
         )
 
+    def add_object_on_land_random(
+        self,
+        object_type: str,
+        attachment_type: str = "",
+        team: Union[int | Team] = Team.ENEMY,
+        y_offset: float = 0,
+        y_rotation: float = 0,
+    ) -> None:
+        """Creates a new object in the level, selects a random land location, then
+        uses the normal add object method with the height determined from the terrain
+
+        Args:
+            object_type (str): Type of the object
+            location (np.array): Location of the object in LEV 3D space [x, y, z]
+            attachment_type (str, optional): Type of attachment. Defaults to "".
+            team (Union[int | Team], optional): Team number. Defaults to Team.ENEMY.
+            y_rotation (float, optional): Rotation of the object in degrees. Defaults to 0.
+            y_offset (float, optional): Vertical offset of the object. Defaults to 0.
+        """
+        z, x = self.find_location_on_land()
+        # find height at the specified x and z location (in LEV 3D space)
+        height = self.terrain_handler.get_height(z, x)
+        # check the height isnt negative, else its water so dont add
+        if height + y_offset < 0:
+            return
+        # now use the normal add object method
+        self.ob3_interface.add_object(
+            object_type=object_type,
+            location=np.array([x, height + y_offset, z]),
+            attachment_type=attachment_type,
+            team=team.value if isinstance(team, Team) else team,
+            y_rotation=y_rotation,
+        )
+
     def _set_location_grid_in_radius(
         self, location_grid: np.array, x: int, z: int, radius: int, set_to: int = 0
     ) -> None:
@@ -126,6 +160,148 @@ class ObjectHandler:
         location_grid[x_min:x_max, z_min:z_max][mask] = set_to
         return location_grid
 
+    def _get_land_mask(self, cutoff_height=-20) -> np.ndarray:
+        """Generates a boolean map grid, where 1 is land and 0 is water via terrain
+        lookup. Is returned in the same dimensions as the terrain (e.g. LEV scale).
+
+        Args:
+            cutoff_height (float, optional): Height above which is considered land.
+            Defaults to -20.
+
+        Returns:
+            np.ndarray: Land mask
+        """
+        # assume more water than land, so start with zeros
+        mask = np.zeros(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+        # check each point against the raw terrain height
+        for x in range(self.terrain_handler.width):
+            for z in range(self.terrain_handler.length):
+                if self.terrain_handler.get_height(x, z) > cutoff_height:
+                    mask[x, z] = 1
+
+        return mask
+
+    def _get_water_mask(self, cutoff_height=-20) -> np.ndarray:
+        """Generates a boolean map grid, where 1 is water and 0 is land via terrain
+        lookup. Is returned in the same dimensions as the terrain (e.g. LEV scale).
+
+        Args:
+            cutoff_height (float, optional): Height above which is considered water.
+            Defaults to -20.
+
+        Returns:
+            np.ndarray: Water mask
+        """
+        return 1 - self._get_land_mask(cutoff_height=cutoff_height)
+
+    def _get_coast_mask(
+        self, cutoff_height: int = -20, radius_percent: int = 10
+    ) -> np.ndarray:
+        """Generates a boolean map grid, where 1 is coast and 0 not coast, within a
+        radius of the max width/length of the terrain. Default radius is 10%
+
+        Args:
+            cutoff_height (int, optional): Height above which is considered coast.
+            Defaults to -20.
+            radius_percent (int, optional): Radius of the coast mask. Defaults to 10[%].
+
+        Returns:
+            np.ndarray: Coast mask
+        """
+        # assume more water than land, so start with zeros
+        mask = np.zeros(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+        # set acceptable spawn within radius_percent% map dims radius of any terrain
+        # ... point (this is a crude way to capture the shore, if we then crop out land)
+        radius = (
+            radius_percent
+            / 100
+            * max(self.terrain_handler.width, self.terrain_handler.length)
+        )
+        for x in range(self.terrain_handler.width):
+            for z in range(self.terrain_handler.length):
+                if self.terrain_handler.get_height(x, z) > cutoff_height:
+                    mask = self._set_location_grid_in_radius(
+                        mask, x, z, radius, set_to=1
+                    )
+        # repeat, but with half the radius - but mask as invalid (this is so we
+        # ... dont get too close to shore)
+        for x in range(self.terrain_handler.width):
+            for z in range(self.terrain_handler.length):
+                if self.terrain_handler.get_height(x, z) > cutoff_height:
+                    mask = self._set_location_grid_in_radius(
+                        mask, x, z, radius // 2, set_to=0
+                    )
+        # now multiply this against the land mask - so we exclude land, giving us only
+        # ... coast
+        return mask * self._get_water_mask(cutoff_height=cutoff_height)
+
+    def find_location_on_water(
+        self, new_obj_radius: float = 0.2
+    ) -> tuple[float, float]:
+        """Finds a random location on the water for the specified object. Will avoid
+        clashing with other objects within their object's radius, including the
+        optional new_obj_radius (default 0.2 units on original LEV scale)
+
+        Args:
+            new_obj_radius (float, optional): Keep-clear radius of this new
+            object. Defaults to 0.2 (unit = the original LEV scale e.g. 256x256).
+
+        Returns:
+            tuple[float, float]: x,z location of the object
+        """
+        # TODO implement the radius checks against other objects
+        # pick a random location within the coast mask
+        return self.noise_generator.select_random_entry_from_2d_array(
+            self._get_water_mask()
+        )
+
+    def find_location_on_coast(
+        self, new_obj_radius: float = 0.2
+    ) -> tuple[float, float]:
+        """Finds a random location on the coast for the specified object. Will avoid
+        clashing with other objects within their object's radius, including the
+        optional new_obj_radius (default 0.2 units on original LEV scale)
+
+        Args:
+            new_obj_radius (float, optional): Keep-clear radius of this new
+            object. Defaults to 0.2 (unit = the original LEV scale e.g. 256x256).
+
+        Returns:
+            tuple[float, float]: x,z location of the object
+        """
+        # TODO implement the radius checks against other objects
+        # pick a random location within the coast mask
+        return self.noise_generator.select_random_entry_from_2d_array(
+            self._get_coast_mask()
+        )
+
+    def find_location_on_land(self, new_obj_radius: float = 0.2) -> tuple[float, float]:
+        """Finds a random location on the land for the specified object. Will avoid
+        clashing with other objects within their object's radius, including the
+        optional new_obj_radius (default 0.2 units on original LEV scale)
+
+        Args:
+            new_obj_radius (float, optional): Keep-clear radius of this new
+            object. Defaults to 0.2 (unit = the original LEV scale e.g. 256x256).
+
+        Returns:
+            tuple[float, float]: x,z location of the object
+        """
+        # TODO implement the radius checks against other objects
+        return self.noise_generator.select_random_entry_from_2d_array(
+            self._get_land_mask()
+        )
+
     def find_location_for_cruiser(self) -> tuple[tuple[int, int, int], float]:
         """Finds a location for the cruiser, by using a custom find_location search
         which looks for only water tiles with a distance of >20 from the coast
@@ -134,55 +310,14 @@ class ObjectHandler:
             tuple[int, int, int]: Selected location of the cruiser (x,y,z)
             float: Angle of the cruiser (y degrees)
         """
-        # find_location algorithm, first create a mapsize x*z grid and set
-        # ... all to 0s (invalid spawn)
-        location_grid = np.zeros(
-            (
-                self.terrain_handler.width,
-                self.terrain_handler.length,
-            )
-        )
-        # set acceptable spawn within 10% map dims radius of any terrain point (this
-        # ... is a crude way to capture the shore, if we then crop out land)
-        radius = 0.1 * max(self.terrain_handler.width, self.terrain_handler.length)
-        for x in range(self.terrain_handler.width):
-            for z in range(self.terrain_handler.length):
-                height = self.terrain_handler.get_height(x, z)
-                if height > -20:
-                    location_grid = self._set_location_grid_in_radius(
-                        location_grid, x, z, radius, set_to=1
-                    )
-        # after applying the above, now mark all terrain (height > -20) as invalid
-        for x in range(self.terrain_handler.width):
-            for z in range(self.terrain_handler.length):
-                if self.terrain_handler.get_height(x, z) > -20:
-                    location_grid[x, z] = 0
-        # use the noise_generator to select a random location from the location_grid
-        # ... (where 1 = valid spawn location)
-        xfinal, zfinal = self.noise_generator.select_random_entry_from_2d_array(
-            location_grid
-        )
-
-        import matplotlib.pyplot as plt
-
-        # Draw heatmap of location_grid
-        plt.figure(figsize=(10, 8))
-        plt.imshow(location_grid, cmap="viridis", interpolation="nearest")
-        plt.colorbar(label="Spawn Probability")
-
-        # Add a large black dot at the selected location
-        plt.plot(zfinal, xfinal, "ko", markersize=10)
-
-        plt.title("Cruiser Spawn Location Heatmap")
-        plt.xlabel("Z-axis")
-        plt.ylabel("X-axis")
-        plt.show()
+        # find a coast location
+        x, z = self.find_location_on_coast()
 
         # Calculate angle from north to inward-facing vector
         center_x = self.terrain_handler.width / 2
         center_z = self.terrain_handler.length / 2
-        angle = np.arctan2(center_z - zfinal, center_x - xfinal)
-        angle = np.rad2deg(angle)
+        angle = np.rad2deg(np.arctan2(center_z - z, center_x - x))
+        logging.info("FINDLOC: Calculated angle")
 
         # the 15 below is to ensure the cruiser is not directly on the waterline
-        return [zfinal, 15, xfinal], angle
+        return [z, 15, x], angle

@@ -225,8 +225,8 @@ class Ob3File:
         # set the object type and location
         new_obj.object_type = object_type
         # NOTE: LEV vs OB3 has different scales. In OB3, the x and z values are
-        # ... in 10x10 units, while in LEV they are 1x1 units. So we need to
-        # ... scale the location values accordingly
+        # ... in 10x10 units, while in LEV they are 1x1 units.
+        # REVERTED STILL TESTING UPSAMPLING
         new_obj._loc_x = location[0] * 10
         new_obj._loc_y = location[1]
         new_obj._loc_z = location[2] * 10
