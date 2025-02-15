@@ -118,7 +118,7 @@ class TerrainHandler:
         mapgen_dir = os.path.join(script_dir, "assets", "mapgen")
         num_mapgen_templates = len(os.listdir(mapgen_dir))
         # pick a mapgen template at random
-        mapgen_template = self.noise_gen.randint(0, num_mapgen_templates - 1)
+        mapgen_template = self.noise_gen.randint(1, num_mapgen_templates - 1)
         logging.info(f"Selected template: {mapgen_template}.png")
         with Image.open(os.path.join(mapgen_dir, f"{mapgen_template}.png")) as fimg:
             # rotate by a random angle
