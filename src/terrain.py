@@ -9,9 +9,9 @@ Contains all info regarding terrain for the level
 from dataclasses import dataclass
 import logging
 import noise
-from fileio.lev import LevFile
-from fileio.ob3 import MAP_SCALER
-from noisegen import NoiseGenerator
+from src.fileio.lev import LevFile
+from src.fileio.ob3 import MAP_SCALER
+from src.noisegen import NoiseGenerator
 import numpy as np
 import os
 from PIL import Image
@@ -195,8 +195,59 @@ class TerrainHandler:
                     self.terrain_points[x, y].mat = 6  # peaks
 
         logging.info("Terrain generation complete!")
-        # TEMP - set all mat points to 2
-        # for x in range(self.width):
-        #     for y in range(self.length):
-        #         self.terrain_points[x, y].mat = 1
-        # END TEMP
+
+    def generate_upscaled_height_array(self, scale: int = 10) -> np.ndarray:
+        """Upscales the height array by a factor of scale, with intermediate
+        points linearly interpolated between the original points.
+
+        Args:
+            scale (int, optional): Scale to apply in each direction. Defaults to 10 (
+            turns 256x256 into 2560x2560).
+
+        Returns:
+            np.ndarray: Upscaled 2 dimensional height array
+        """
+        # Create original height array
+        height_array = np.zeros((self.width, self.length))
+        for x in range(self.width):
+            for z in range(self.length):
+                height_array[x, z] = self.get_height(x, z)
+
+        # Create coordinate arrays for output
+        # Use scale-1 steps to ensure we hit exactly 0 and 1
+        x = np.linspace(0, self.width - 1, self.width * scale)
+        z = np.linspace(0, self.length - 1, self.length * scale)
+
+        # Get integer and fractional parts
+        x0 = x.astype(np.int32)
+        z0 = z.astype(np.int32)
+        x1 = np.minimum(x0 + 1, self.width - 1)
+        z1 = np.minimum(z0 + 1, self.length - 1)
+        xf = x - x0
+        zf = z - z0
+
+        # Create output array
+        result = np.zeros((self.width * scale, self.length * scale))
+
+        # Perform interpolation
+        for i in range(len(x)):
+            for j in range(len(z)):
+                # If we're exactly on an integer position, use the original value
+                if xf[i] == 0 and zf[j] == 0:
+                    result[i, j] = height_array[x0[i], z0[j]]
+                else:
+                    # Get corner values
+                    v00 = height_array[x0[i], z0[j]]
+                    v01 = height_array[x0[i], z1[j]]
+                    v10 = height_array[x1[i], z0[j]]
+                    v11 = height_array[x1[i], z1[j]]
+
+                    # Interpolate
+                    result[i, j] = (
+                        v00 * (1 - xf[i]) * (1 - zf[j])
+                        + v01 * (1 - xf[i]) * zf[j]
+                        + v10 * xf[i] * (1 - zf[j])
+                        + v11 * xf[i] * zf[j]
+                    )
+
+        return result
