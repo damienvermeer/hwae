@@ -66,8 +66,32 @@ class _OB3Object:
             self.object_type = self.object_type.rstrip(b"\x00").decode("ascii")
         if isinstance(self.attachment_type, bytes):
             self.attachment_type = self.attachment_type.rstrip(b"\x00").decode("ascii")
+        # set non-ob3 parameters, such as properties for the object when we are placing
+        # ... multiple objects and dont want to overlap them
+        self._radius_keepout = 0.5
         # complete other steps
         self.clean_object()
+
+    def set_yaxis_rotation(self, deg: float) -> None:
+        """Sets this object to a rotation around the y axis of 'deg' degrees
+
+        Args:
+            deg (float): Angle of rotation in degrees
+        """
+        if deg == 0:
+            return  # no rotation
+        c = np.cos(np.radians(deg))
+        s = np.sin(np.radians(deg))
+        # Set rotation matrix components for Y-axis rotation
+        self.r1_a = c
+        self.r1_b = 0
+        self.r1_c = -s
+        self.r2_a = 0
+        self.r2_b = 1
+        self.r2_c = 0
+        self.r3_a = s
+        self.r3_b = 0
+        self.r3_c = c
 
     def clean_object(self) -> None:
         """Completes post-creation steps (create location vector, rotation matrix, etc.)
@@ -77,7 +101,7 @@ class _OB3Object:
         # make location vector
         self.location = np.array([self._loc_x, self._loc_y, self._loc_z])
         # make nice rotation matrix
-        self.rotation_matrix = np.array(
+        self._rotation_matrix = np.array(
             [
                 [self.r1_a, self.r1_b, self.r1_c],
                 [self.r2_a, self.r2_b, self.r2_c],
@@ -93,7 +117,7 @@ class _OB3Object:
         # extract rotation matrix back into r1_a r1_b etc
         for i, row in enumerate(["r1", "r2", "r3"]):
             for j, col in enumerate(["a", "b", "c"]):
-                setattr(self, f"{row}_{col}", self.rotation_matrix[i][j])
+                setattr(self, f"{row}_{col}", self._rotation_matrix[i][j])
         # and same for location
         self._loc_x = self.location[0]
         self._loc_y = self.location[1]
@@ -183,6 +207,8 @@ class Ob3File:
         location: np.array,
         attachment_type: str = "",
         team: int = 1,
+        y_rotation: float = 0,
+        _radius_keepout: float = 0.1,  # (not used in ob3 - for seperating objects)
     ) -> None:
         """Add a new object to the OB3 file.
 
@@ -190,7 +216,9 @@ class Ob3File:
             object_type (str): Type of the object
             location (tuple): Location of the object
             attachment_type (str): Type of attachment
-            team (int): Team number (0=player, 1+=enemy, 0xFF=neutral)
+            team (int): Team number (0=player, 1+=enemy, 0xFFFF=neutral)
+            y_rotation (float): Rotation of the object in degrees
+            _radius_keepout (float): Radius to keep objects away from each other. Not a property of an ob3 object.
         """
         # create a new _OB3Object with its default values
         new_obj = _OB3Object()
@@ -208,6 +236,10 @@ class Ob3File:
         new_obj.controllable_id = team == 0  # only controllable if on my team
         # set its id, which is the next available id
         new_obj.my_id = new_obj.renderable_id = len(self.objects)
+        # set the radius keepout
+        new_obj._radius_keepout = _radius_keepout
+        # apply rotation
+        new_obj.set_yaxis_rotation(y_rotation)
         # call clean object (to set location values etc)
         new_obj.clean_object()
         self.objects.append(new_obj)

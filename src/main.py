@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 if __name__ == "__main__":
     # TODO somehow specify the output location
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=1)
+    noise_generator = NoiseGenerator(seed=110)
 
     # TODO select a template
     # select large template root
@@ -40,26 +40,27 @@ if __name__ == "__main__":
     select_map_texture_group(
         cfg_data, noise_generator, rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}"
     )
-    # create a terrain handler
+    # select terrain heights
     terrain_handler = TerrainHandler(lev_data, noise_generator)
     terrain_handler.set_terrain_from_noise()
     # create an objecthandler
-    object_handler = ObjectHandler(terrain_handler, ob3_data)
+    object_handler = ObjectHandler(terrain_handler, ob3_data, noise_generator)
+    cruiser_loc, y_rotation = object_handler.find_location_for_cruiser()
+    print(cruiser_loc, y_rotation)
     object_handler.add_object(
         "Carrier",
-        np.array([100, 6, 100]),
-        team=0,
+        location=cruiser_loc,
+        team=Team.PLAYER,
+        y_rotation=y_rotation,
+    )
+    object_handler.add_object(
+        "ALIENGROUNDPROD",
+        location=[41, 15, 155],
+        team=Team.PLAYER,
     )
     # object_handler.add_object("dedicatedlifter", np.array([95, 15, 100]), team=0)
     object_handler.add_object_on_ground(
         "ALIENGROUNDPROD", location_x=256 / 2, location_z=256 / 2, team=1
-    )
-    object_handler.add_object_on_ground(
-        "command",
-        location_x=256 / 2 - 5,
-        location_z=256 / 2 + 2,
-        y_offset=10,
-        team=Team.NEUTRAL,
     )
     # create minimap
     generate_minimap(

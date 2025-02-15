@@ -63,3 +63,25 @@ class NoiseGenerator:
         # apply floor/cutoff (typically used for terrain)
         map[map < cutoff] = 0
         return map
+
+    def select_random_entry_from_2d_array(self, arr: np.ndarray) -> tuple[int, int]:
+        """Select a random entry from a 2D array (only if the array value is > 0)
+
+        Args:
+            arr (np.ndarray): 2D array to select a point from
+
+        Returns:
+            tuple[int, int]: The x and y coordinates of the selected point in the array
+        """
+        # iterate over the array dimensions, creating a list of tuples if
+        # ... the array value is > 0
+        possible_values = [
+            (x, z)
+            for x in range(arr.shape[0])
+            for z in range(arr.shape[1])
+            if arr[x, z] > 0
+        ]
+        # select a random value from the possible_values
+        result = possible_values[self.randint(0, len(possible_values))]
+        # deconstruct
+        return result[0], result[1]
