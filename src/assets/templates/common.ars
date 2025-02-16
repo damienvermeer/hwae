@@ -15,10 +15,7 @@ Action: AIScript_MakeAvailableForBuilding
   AIS_UNITTYPE_SPECIFIC : scavunit
 Action: AIScript_MakeAvailableForBuilding
   AIS_SPECIFICPLAYER : 0
-  AIS_UNITTYPE_SPECIFIC : Minigun
-Action: AIScript_MakeAvailableForBuilding
-  AIS_CURRENTPLAYER 
-  AIS_UNITTYPE_SPECIFIC : chopper  
+  AIS_UNITTYPE_SPECIFIC : soulunit
 }
 
 Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 1: BOOL_AND
