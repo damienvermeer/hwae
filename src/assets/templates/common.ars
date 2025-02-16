@@ -13,6 +13,12 @@ Action: AIScript_MakeAvailableForBuilding
 Action: AIScript_MakeAvailableForBuilding
   AIS_SPECIFICPLAYER : 0
   AIS_UNITTYPE_SPECIFIC : scavunit
+Action: AIScript_MakeAvailableForBuilding
+  AIS_SPECIFICPLAYER : 0
+  AIS_UNITTYPE_SPECIFIC : Minigun
+Action: AIScript_MakeAvailableForBuilding
+  AIS_CURRENTPLAYER 
+  AIS_UNITTYPE_SPECIFIC : chopper  
 }
 
 Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 1: BOOL_AND
@@ -32,4 +38,18 @@ Condition: AIScript_SpecificUnitDeath
   1
 Action: AIScript_Defeat
   AIS_SPECIFICPLAYER : 0
+Action: AIScript_PlaySound
+  "1116"
+Action: AIScript_SetCountdownTimer
+  1
+  8
+}
+
+Trigger: "HWAE end level" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+{
+Condition: AIScript_CountdownTimer
+  1
+  AIS_EQUALTO
+  0
+Action: AIScript_EndLevel
 }

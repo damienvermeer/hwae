@@ -1,0 +1,14 @@
+Trigger: "HWAE destory_all victory condition" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+{
+Condition: AIScript_Command
+  AIS_SPECIFICPLAYER : 1
+  0
+  AIS_UNITTYPE_BUILDING
+Action: AIScript_Victory
+  AIS_CURRENTPLAYER 
+Action: AIScript_SetCountdownTimer
+  1
+  8
+Action: AIScript_PlaySound
+  "2009"
+}

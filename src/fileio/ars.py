@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 import logging
 import os
 import re
-from typing import List, Dict, Any
+from typing import List
+import pathlib
 
 # Regex pattern for trigger header
 TRIGGER_HEADER_PATTERN = re.compile(
@@ -149,6 +150,20 @@ class ArsFile:
             record.conditions.append(_ARSCondition(aiscript_type[1], values))
         else:
             record.actions.append(_ARSAction(aiscript_type[1], values))
+
+    def load_additional_data(self, file_to_load: pathlib.Path) -> None:
+        """Loads the record(s) from the specified file into the current object
+
+        Args:
+            file_to_load (pathlib.Path): The path to the file to load
+        """
+        logging.info("ARS reading additional data")
+        with open(file_to_load, "r") as f:
+            triggers = f.read().split("Trigger: ")
+            for trigger in triggers[1:]:  # ignore header
+                record = self._parse_trigger(trigger)
+                self.objects.append(record)
+        logging.info(f"Loaded {len(self.objects)} triggers")
 
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Save triggers to file"""
