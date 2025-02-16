@@ -14,6 +14,7 @@ from typing import Union
 
 from src.fileio.ob3 import Ob3File, MAP_SCALER
 from src.noisegen import NoiseGenerator
+from src.models import Team, ObjectContainer
 from src.terrain import TerrainHandler
 
 
@@ -23,11 +24,8 @@ class LocationEnum(IntEnum):
     COAST = auto()
 
 
-class Team(IntEnum):
-    PLAYER = 0
-    ENEMY = 1
-    # TODO support multiple teams (requires .for file likely)
-    NEUTRAL = 4294967295  # FFFF
+class ObjectType(IntEnum):
+    pass
 
 
 @dataclass
@@ -318,6 +316,65 @@ class ObjectHandler:
             required_radius=30,
         )
         logging.info("ADD Carrier: Done")
+
+    def add_object_template_on_land_random(
+        self,
+        object_template: list[ObjectContainer],
+    ) -> None:
+        """A special version of add on land - it identifies a location, but then adds
+        multiple objects based on the relative positioning to the first
+
+        Args:
+            object_template (list[ObjectContainer]): list of [reference, additional1, additional2, ...]
+        """
+        logging.info(f"Starting template add ({len(object_template)} objects)")
+        # get info from the reference object
+        ref_object = object_template[0]
+        # get a lotation like normal below defaults to add on land
+        returnval = self._find_location(required_radius=ref_object.required_radius)
+        if returnval is None:
+            return
+        z, x = returnval
+        # find height at the specified x and z location (in LEV 3D space)
+        height = self.terrain_handler.get_height(z, x)
+        # check the height isnt negative, else its water so dont add
+        reference_object_y_offset = ref_object.y_offset
+        if height + reference_object_y_offset < 0:
+            return
+
+        # Update the cached object mask before adding the object
+        self._update_cached_object_mask(x, z, int(ref_object.required_radius))
+
+        # now use the normal add object method
+        team = ref_object.team
+        self.ob3_interface.add_object(
+            object_type=ref_object.object_type,
+            location=np.array([x, height + ref_object.y_offset, z]),
+            attachment_type=ref_object.attachment_type,
+            team=team.value if isinstance(team, Team) else team,
+            required_radius=ref_object.required_radius,
+        )
+
+        # START of template repeat (for additional objects defined in this template)
+        for obj_dict in object_template[1:]:
+            # calculate the relative location
+            location = np.array(
+                [
+                    x + obj_dict.template_x_offset,
+                    height + reference_object_y_offset + obj_dict.template_y_offset,
+                    z + obj_dict.template_z_offset,
+                ]
+            )
+            team = obj_dict.team
+            # and add the subsquent object
+            self.ob3_interface.add_object(
+                object_type=obj_dict.object_type,
+                location=location,
+                attachment_type=obj_dict.attachment_type,
+                team=team.value if isinstance(team, Team) else team,
+                required_radius=obj_dict.required_radius,
+            )
+        logging.info(f"Added {len(object_template)} objects via template")
 
     def add_object_on_land_random(
         self,

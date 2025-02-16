@@ -13,6 +13,7 @@ from fileio.cfg import CfgFile
 from fileio.lev import LevFile
 from fileio.ob3 import Ob3File
 from fileio.ars import ArsFile
+import src.object_templates as ot
 
 from noisegen import NoiseGenerator
 from objects import ObjectHandler, Team
@@ -72,13 +73,16 @@ def main():
     # add carrier first as it needs to be object id 1 for common .ars logic
     object_handler.add_carrier()
     # object_handler.add_scenery(map_size=map_size_template)
-    # for _ in range(2):
-    object_handler.add_object_on_land_random(
-        "AlienTower",
-        team=Team.ENEMY,
-        required_radius=5,
-        attachment_type="",
-    )
+    for _ in range(5):
+        object_handler.add_object_on_land_random(
+            "AlienTower",
+            team=Team.ENEMY,
+            required_radius=5,
+            attachment_type="",
+        )
+        object_handler.add_object_template_on_land_random(
+            ot.TEMPLATE_ALIEN_AA,
+        )
 
     # STEP 5 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
     generate_minimap(
