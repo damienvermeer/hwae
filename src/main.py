@@ -15,6 +15,7 @@ from fileio.ob3 import Ob3File
 from fileio.ars import ArsFile
 import src.object_templates as ot
 
+from construction import ConstructionManager
 from noisegen import NoiseGenerator
 from objects import ObjectHandler, Team
 from terrain import TerrainHandler
@@ -89,6 +90,10 @@ def main():
         terrain_handler, cfg_data, OUTPUT_PATH / NEW_LEVEL_NAME / "map.pcx"
     )
     # STEP 6 - SAVE ALL FILES TO OUTPUT LOCATION
+    construction_manager = ConstructionManager(ars_data, noise_generator)
+    construction_manager.select_random_construction_availability()
+
+    # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data]:
         file.save(OUTPUT_PATH / NEW_LEVEL_NAME, NEW_LEVEL_NAME)
 

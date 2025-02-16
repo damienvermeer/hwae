@@ -85,3 +85,27 @@ class NoiseGenerator:
         result = possible_values[self.randint(0, len(possible_values))]
         # deconstruct
         return result[0], result[1]
+
+    def select_random_sublist_from_list(
+        self, in_list: list, min_n: int = 0, max_n: int = 9999
+    ) -> list:
+        """Selects a random sublist from a list, where the sublist length is between min_n and max_n.
+        If the list length is less than min_n, the function will return a sublist of length min_n.
+        If the list length is greater than max_n, the function will return a sublist of length max_n.
+
+        Args:
+            in_list (list): List to select from
+            min_n (int): Minimum length of the sublist. Defaults to 0.
+            max_n (int): Maximum length of the sublist. Defaults to 9999.
+
+        Returns:
+            list: Random sublist from the input list
+        """
+        list_length = len(in_list)
+        if list_length <= min_n:
+            return in_list[:min_n]  # Return up to min_n elements
+        if list_length <= max_n:
+            k = min_n if min_n == list_length else self.randint(min_n, list_length)
+        else:
+            k = min_n if min_n == max_n else self.randint(min_n, max_n)
+        return random.sample(in_list, k=k)

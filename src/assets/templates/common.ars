@@ -1,5 +1,5 @@
 AIRS
-Trigger: "HWAE common build units" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+Trigger: "BUILD_SETUP" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
 {
 Condition: AIScript_ElapsedTime
   AIS_GREATEREQUAL

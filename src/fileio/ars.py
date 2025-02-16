@@ -165,6 +165,22 @@ class ArsFile:
                 self.objects.append(record)
         logging.info(f"Loaded {len(self.objects)} triggers")
 
+    def add_action_to_existing_record(
+        self, record_name: str, action_title: str, action_details: list[str]
+    ) -> None:
+        """Add an action to an existing record
+
+        Args:
+            record_name (str): The name of the record to add the action to
+            action_title (str): The title of the action
+            action_details (list[str]): The details of the action
+        """
+        for record in self.objects:
+            if record.name == record_name:
+                record.actions.append(_ARSAction(action_title, action_details))
+                return
+        logging.info(f"Record {record_name} not found, action not added")
+
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Save triggers to file"""
         if not file_name.endswith(".ars"):
