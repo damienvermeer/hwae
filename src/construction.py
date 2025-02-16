@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import logging
 import os
 import time
+import copy
 
 
 AVAILABLE_VEHCILES = [
@@ -142,3 +143,27 @@ class ConstructionManager:
                 ],
             )
         logging.info(f"Added {len(picked_addons)} addons")
+
+    def find_weapon_not_in_ars_build(self) -> str:
+        """Finds a weapon not in the ARS build order trigger. If all weapons are
+        in the trigger, returns None.
+
+        Returns:
+            str: Name of the weapon not in the trigger, or None if all weapons are
+            in the trigger
+        """
+        # get existing weapons in the BUILD_SETUP trigger
+        trigger_info = self.ars_file.get_actions_from_existing_record("BUILD_SETUP")
+        # iterate through the trigger info, constructing a list of existing weapon
+        # ... types
+        weapons_to_choose_from = copy.deepcopy(AVAILABLE_WEAPONS)
+        for action_type, action_details in trigger_info:
+            if action_type == "AIScript_MakeAvailableForBuilding":
+                # Extract unit type from the second detail (AIS_UNITTYPE_SPECIFIC : UnitName)
+                unit_type = action_details[1].split(" : ")[1]
+                if unit_type in weapons_to_choose_from:
+                    weapons_to_choose_from.remove(unit_type)
+        logging.info(f"Remaining weapons to choose from: '{weapons_to_choose_from}'")
+        if not weapons_to_choose_from:
+            return None
+        return self.noise_generator.select_random_from_list(weapons_to_choose_from)

@@ -84,14 +84,36 @@ def main():
         object_handler.add_object_template_on_land_random(
             ot.TEMPLATE_ALIEN_AA,
         )
+    object_handler.add_object_on_land_random(
+        "recharge_crate",
+        team=Team.NEUTRAL,
+        required_radius=1,
+    )
 
     # STEP 5 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
     generate_minimap(
         terrain_handler, cfg_data, OUTPUT_PATH / NEW_LEVEL_NAME / "map.pcx"
     )
-    # STEP 6 - SAVE ALL FILES TO OUTPUT LOCATION
+    # STEP 6 - RANDOMLY UNLOCK VEHICLES/ADDONS
     construction_manager = ConstructionManager(ars_data, noise_generator)
     construction_manager.select_random_construction_availability()
+
+    # STEP 7 - FINALISE SCRIPT/TRIGGERS
+    if True:  # TODO if a crate zone is present
+        ars_data.load_additional_data(
+            template_root / "zone_specific" / "weapon_crate.ars"
+        )
+        spare_weapon = construction_manager.find_weapon_not_in_ars_build()
+        if spare_weapon is None:
+            return
+        ars_data.add_action_to_existing_record(
+            record_name="HWAE_zone_specific weapon ready",
+            action_title="AIScript_MakeAvailableForBuilding",
+            action_details=[
+                "AIS_SPECIFICPLAYER : 0",
+                f"AIS_UNITTYPE_SPECIFIC : {spare_weapon}",
+            ],
+        )
 
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data]:

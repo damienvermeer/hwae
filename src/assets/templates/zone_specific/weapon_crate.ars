@@ -1,0 +1,26 @@
+
+Trigger: "HWAE_zone_specific sample crate for weapon" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+{
+Condition: AIScript_Scavenges
+  AIS_SPECIFICPLAYER : 0
+  1
+  AIS_UNITTYPE_SPECIFIC : recharge_crate
+  AIS_EQUALTO
+Action: AIScript_SetCountdownTimer
+  9
+  30
+Action: AIScript_StartDisplayCountdown
+  9
+  "Analysis complete in:"
+Action: AIScript_ShowSampler
+  0
+}
+
+Trigger: "HWAE_zone_specific weapon ready" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+{
+Condition: AIScript_CountdownTimer
+  9
+  AIS_EQUALTO
+  0
+Action: AIScript_StopDisplayCountdown
+}

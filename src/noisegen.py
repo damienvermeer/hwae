@@ -86,6 +86,17 @@ class NoiseGenerator:
         # deconstruct
         return result[0], result[1]
 
+    def select_random_from_list(self, in_list: list) -> object:
+        """Selects a random object from a list
+
+        Args:
+            in_list (list): List to select from
+
+        Returns:
+            object: Random object from the list
+        """
+        return in_list[self.randint(0, len(in_list))]
+
     def select_random_sublist_from_list(
         self, in_list: list, min_n: int = 0, max_n: int = 9999
     ) -> list:

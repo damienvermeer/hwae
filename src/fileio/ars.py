@@ -181,6 +181,20 @@ class ArsFile:
                 return
         logging.info(f"Record {record_name} not found, action not added")
 
+    def get_actions_from_existing_record(
+        self, record_name: str
+    ) -> list[tuple[str, list[str]]]:
+        """Get actions from existing record (by name)
+
+        Returns:
+            list[tuple[str, list[str]]]: The actions found, or an empty list if not found.
+        """
+        for record in self.objects:
+            if record.name == record_name:
+                return [(action.type, action.values) for action in record.actions]
+        logging.info(f"Record {record_name} not found, actions not found")
+        return []
+
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Save triggers to file"""
         if not file_name.endswith(".ars"):
