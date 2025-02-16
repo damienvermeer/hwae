@@ -33,29 +33,10 @@ ALLOWED_ZONE_SPECIALS = {
     ZoneType.SCRAP: [ZoneSpecial.WEAPON_CRATE],
 }
 
-
 ZONE_SPECIAL_WEIGHTS = {
     ZoneSpecial.NONE: 3,
     ZoneSpecial.WEAPON_CRATE: 1,
 }
-
-
-@dataclass
-class ZoneMarker:
-    """Used to mark a 'zone' - an area of the map which is a base or a series of scrap
-    etc. Although it has a radius, it does not count as an object for radius checks.
-    """
-
-    x: int
-    z: int
-    zone_type: ZoneType
-    zone_size: ZoneSize
-    zone_special: ZoneSpecial = ZoneSpecial.NONE
-
-    def __post_init__(self):
-        """Apply extra characteristics based on zone type and size"""
-        self.radius = ZONE_SIZE_TO_RADIUS[self.zone_size]
-        self.texture_id = ZONE_TYPE_TO_TEXTURE_ID[self.zone_type]
 
 
 @dataclass

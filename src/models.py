@@ -32,15 +32,22 @@ class ZoneSpecial(IntEnum):
 
 
 ZONE_SIZE_TO_RADIUS = {
-    ZoneSize.SMALL: 5,
-    ZoneSize.MEDIUM: 6,
-    ZoneSize.LARGE: 9,
-    ZoneSize.XLARGE: 11,
+    ZoneSize.SMALL: 8,
+    ZoneSize.MEDIUM: 11,
+    ZoneSize.LARGE: 16,
+    ZoneSize.XLARGE: 19,
 }
 
 ZONE_TYPE_TO_TEXTURE_ID = {
     ZoneType.BASE: 8,
     ZoneType.SCRAP: 10,
+}
+
+ZONE_SIZE_TO_NUM_OBJECTS = {
+    ZoneSize.SMALL: 7,
+    ZoneSize.MEDIUM: 11,
+    ZoneSize.LARGE: 14,
+    ZoneSize.XLARGE: 19,
 }
 
 
@@ -73,8 +80,10 @@ class ZoneMarker:
         return ZONE_TYPE_TO_TEXTURE_ID[self.zone_type]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ObjectContainer:
+    """Container for object data used in zone population"""
+
     object_type: str
     team: Team
     required_radius: float

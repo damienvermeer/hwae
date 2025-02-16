@@ -30,7 +30,7 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=11)
+    noise_generator = NoiseGenerator(seed=0)
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -89,26 +89,13 @@ def main():
     for zone in object_handler.zones:
         terrain_handler.apply_texture_based_on_zone(zone)
         terrain_handler.flatten_terrain_based_on_zone(zone)
-        object_handler.add_object_on_land_random(
-            "AlienTower",
-            team=Team.ENEMY,
-            required_radius=5,
-            attachment_type="",
-            in_zone=zone,
-        )
+        object_handler.populate_zone(zone)
 
-    # STEP XXX - POPULATE THE MAP WITH OBJECTS
-
-    # object_handler.add_scenery(map_size=map_size_template)
+    # STEP XXX - POPULATE THE MAP WITH OTHER OBJECTS
+    object_handler.add_scenery(map_size=map_size_template)
     for _ in range(5):
-        # object_handler.add_object_on_land_random(
-        #     "AlienTower",
-        #     team=Team.ENEMY,
-        #     required_radius=5,
-        #     attachment_type="",
-        # )
         object_handler.add_object_template_on_land_random(
-            ot.TEMPLATE_ALIEN_AA,
+            ot.TEMPLATE_ALIEN_AA, consider_zones=True
         )
     # object_handler.add_object_on_land_random(
     #     "recharge_crate",

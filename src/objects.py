@@ -6,14 +6,14 @@ src.objects
 Contains all info regarding objects for the level
 """
 
-from dataclasses import dataclass
 import logging
 import math
 import random
+from dataclasses import dataclass
 from enum import IntEnum, auto
 from pathlib import Path
-from typing import Optional
-from typing import Union
+from typing import Optional, Union
+
 import numpy as np
 
 from src.fileio.ob3 import Ob3File, MAP_SCALER
@@ -25,8 +25,12 @@ from src.models import (
     ZoneMarker,
     ObjectContainer,
     ZoneSpecial,
+    ZONE_SIZE_TO_NUM_OBJECTS,
 )
 from src.terrain import TerrainHandler
+
+# Import object containers after all other imports to prevent circular dependencies
+from object_containers import ALL_SCRAP, ALL_BASE, BASE_PRIORITY1, BASE_PRIORITY2
 
 
 class LocationEnum(IntEnum):
@@ -50,34 +54,6 @@ class ObjectHandler:
             )
         )
         self.zones = []
-
-    def add_scenery(self, map_size: str) -> None:
-        """Adds a lot of random/different scenery objects to the level"""
-        # TODO in future, switch below on map size - the below seems reasonable
-        # ... for 'large' 256x256
-        objs = (
-            ["troprockcd"] * 8
-            + ["troprockbd"] * 7
-            + ["troprockad"] * 6
-            + ["troprockcw"] * 5
-            + ["troprockaw"] * 2
-            + ["palm1"] * 80
-            + ["plant1"] * 30
-            + ["palm2"] * 50
-            + ["palm3"] * 25
-            + ["rubblea"] * 5
-            + ["rubbleb"] * 5
-            + ["rubblec"] * 5
-            + ["rubbled"] * 5
-            + ["rubblee"] * 5
-        )
-        for obj in objs:
-            self.add_object_on_land_random(
-                obj,
-                team=Team.NEUTRAL,
-                required_radius=2,
-            )
-        logging.info(f"Done adding {len(objs)} scenery objects")
 
     def _update_mask_grid_with_radius(
         self, location_grid: np.ndarray, x: int, z: int, radius: int, set_to: int = 0
@@ -356,7 +332,7 @@ class ObjectHandler:
         # apply that mask to the other masks specified in the argument
         if consider_objects:
             mask *= self._get_object_mask()
-        if consider_zones:
+        if consider_zones and in_zone is None:
             mask *= self._get_all_zone_mask()
         if consider_zone_extra_spacing:
             mask *= self._get_zone_seperation_mask()
@@ -404,7 +380,9 @@ class ObjectHandler:
         """
         # find a coast location
         logging.info("ADD Carrier: Starting")
-        x, z = self._find_location(where=LocationEnum.COAST, required_radius=required_radius)
+        x, z = self._find_location(
+            where=LocationEnum.COAST, required_radius=required_radius
+        )
 
         # Calculate angle from north to inward-facing vector
         center_x = self.terrain_handler.width / 2
@@ -442,18 +420,22 @@ class ObjectHandler:
     def add_object_template_on_land_random(
         self,
         object_template: list[ObjectContainer],
+        consider_zones: bool = False,
     ) -> None:
         """A special version of add on land - it identifies a location, but then adds
         multiple objects based on the relative positioning to the first
 
         Args:
             object_template (list[ObjectContainer]): list of [reference, additional1, additional2, ...]
+            consider_zones (bool, optional): If True, the function will consider zones when placing objects. Defaults to False.
         """
         logging.info(f"Starting template add ({len(object_template)} objects)")
         # get info from the reference object
         ref_object = object_template[0]
         # get a lotation like normal below defaults to add on land
-        returnval = self._find_location(required_radius=ref_object.required_radius)
+        returnval = self._find_location(
+            required_radius=ref_object.required_radius, consider_zones=consider_zones
+        )
         if returnval is None:
             return
         z, x = returnval
@@ -506,6 +488,7 @@ class ObjectHandler:
         y_offset: float = 0,
         y_rotation: float = 0,
         required_radius: float = 1,
+        consider_zones: bool = False,
         in_zone: ZoneMarker = None,
     ) -> None:
         """Creates a new object in the level, selects a random land location, then
@@ -519,11 +502,14 @@ class ObjectHandler:
             y_rotation (float, optional): Rotation of the object in degrees. Defaults to 0.
             y_offset (float, optional): Vertical offset of the object. Defaults to 0.
             required_radius (float, optional): Keep-clear radius of this new object. Defaults to 1.
+            consider_zones (bool, optional): Whether to consider other zones. Defaults to False.
             in_zone (ZoneMarker, optional): Zone to place the object in. Defaults to None.
         """
         # below defaults to add on land
         returnval = self._find_location(
-            required_radius=required_radius, in_zone=in_zone
+            required_radius=required_radius,
+            consider_zones=consider_zones,
+            in_zone=in_zone,
         )
         if returnval is None:
             return
@@ -572,6 +558,7 @@ class ObjectHandler:
                 obj,
                 team=Team.NEUTRAL,
                 required_radius=2,
+                consider_zones=True,
             )
         logging.info(f"Done adding {len(objs)} scenery objects")
 
@@ -617,3 +604,74 @@ class ObjectHandler:
         logging.info(
             f"Could not find location for zone {zone_type} {zone_size} {zone_special}"
         )
+
+    def populate_zone(self, zone: ZoneMarker) -> None:
+        """Populates a zone with objects based on the zone type and size.
+
+        Args:
+            zone (ZoneMarker): Zone to populate
+        """
+        # get the probability list from models for the zone type
+        logging.info("Populating zone: " + str(zone))
+        # look up how many objects to add to the zone, based on its size
+        num_objects = ZONE_SIZE_TO_NUM_OBJECTS[zone.zone_size]
+        if zone.zone_type == ZoneType.SCRAP:
+            for _ in range(num_objects):
+                return # TODO REVERT
+                # SCRAP ZONES SEEM TO CAUSE INSTABILITY?
+                # pick a random object from the dict
+                object_to_add = self.noise_generator.select_random_from_weighted_dict(
+                    ALL_SCRAP
+                )
+                # add the object to the zone
+                self.add_object_on_land_random(
+                    object_to_add.object_type,
+                    attachment_type=object_to_add.attachment_type,
+                    team=object_to_add.team,
+                    required_radius=object_to_add.required_radius,
+                    y_rotation=self.noise_generator.randint(0, 360),
+                    in_zone=zone,
+                )
+            return
+        elif zone.zone_type == ZoneType.BASE:
+            priority1_num = num_objects // 4
+            for _ in range(priority1_num):
+                object_to_add = self.noise_generator.select_random_from_weighted_dict(
+                    BASE_PRIORITY1
+                )
+                self.add_object_on_land_random(
+                    object_to_add.object_type,
+                    attachment_type=object_to_add.attachment_type,
+                    team=object_to_add.team,
+                    required_radius=object_to_add.required_radius,
+                    y_rotation=self.noise_generator.randint(0, 360),
+                    in_zone=zone,
+                )
+            priority2_num = num_objects // 3
+            for _ in range(priority2_num):
+                object_to_add = self.noise_generator.select_random_from_weighted_dict(
+                    BASE_PRIORITY2
+                )
+                self.add_object_on_land_random(
+                    object_to_add.object_type,
+                    attachment_type=object_to_add.attachment_type,
+                    team=object_to_add.team,
+                    required_radius=object_to_add.required_radius,
+                    y_rotation=self.noise_generator.randint(0, 360),
+                    in_zone=zone,
+                )
+            # and all other
+            for _ in range(num_objects - priority1_num - priority2_num):
+                object_to_add = self.noise_generator.select_random_from_weighted_dict(
+                    ALL_BASE
+                )
+                self.add_object_on_land_random(
+                    object_to_add.object_type,
+                    attachment_type=object_to_add.attachment_type,
+                    team=object_to_add.team,
+                    required_radius=object_to_add.required_radius,
+                    y_rotation=self.noise_generator.randint(0, 360),
+                    in_zone=zone,
+                )
+            return
+        logging.info("Populating zone: " + str(zone) + " completed")
