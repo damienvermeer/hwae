@@ -29,14 +29,13 @@ def generate_minimap(
     logging.info(
         f"Step 1: Downsampling terrain from {terrain_data.width}x{terrain_data.length} to 128x128..."
     )
-    original_terrain = copy.deepcopy(terrain_data.terrain_points)
 
     # Calculate stride for downsampling (must handle rectangular terrains too)
     stride_x = terrain_data.width // 128
     stride_z = terrain_data.length // 128
 
     # Downsample using calculated strides
-    reshaped_terrain = original_terrain[::stride_x, ::stride_z]
+    reshaped_terrain = terrain_data.terrain_points[::stride_x, ::stride_z]
 
     # If the downsampled size is still too large (due to rounding), take the first 128x128
     if reshaped_terrain.shape[0] > 128 or reshaped_terrain.shape[1] > 128:
