@@ -20,22 +20,23 @@ from pathlib import Path
 
 
 def select_map_texture_group(
-    cfg: CfgFile, noise_gen: NoiseGenerator, paste_textures_path: str
+    path_to_textures: Path,
+    cfg: CfgFile,
+    noise_gen: NoiseGenerator,
+    paste_textures_path: str,
 ) -> None:
     """
     Selects a random group of textures from the pre-grouped textures, loads the
     texture info into the CFG file and then copies them to the paste_textures_path
 
     Args:
+        path_to_textures (Path): Location of the pre-grouped textures
         cfg (CfgFile): CFG file interface
         noise_gen (NoiseGenerator): Noise generator
         paste_textures_path (str): Location to copy the textures to
     """
-    # load the location of the pre-grouped textures
-    pre_grouped_textures = Path(__file__).resolve().parent / "assets" / "textures"
-
     # count how many folders there are
-    folders = os.listdir(pre_grouped_textures)
+    folders = os.listdir(path_to_textures)
 
     # select a random folder using noise_gen
     if len(folders) == 1:
@@ -45,13 +46,13 @@ def select_map_texture_group(
 
     # Load the texture_description from the folder
     with open(
-        pre_grouped_textures / f"{folders[folder_idx]}" / "texture_description.txt", "r"
+        path_to_textures / f"{folders[folder_idx]}" / "texture_description.txt", "r"
     ) as f:
         cfg["Land Textures"] = f.read()
 
     # copy all the textures into the output location
     shutil.copytree(
-        pre_grouped_textures / f"{folders[folder_idx]}",
+        path_to_textures / f"{folders[folder_idx]}",
         paste_textures_path,
         dirs_exist_ok=True,
         ignore=lambda x, y: [f for f in y if not f.endswith(".pcx")],

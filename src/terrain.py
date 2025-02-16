@@ -39,6 +39,14 @@ class TerrainHandler:
     def get_height(self, x: int, z: int) -> float:
         return self.terrain_points[x, z].height / MAP_SCALER
 
+    def _get_height_2d_array(self) -> np.ndarray:
+        return np.array(
+            [
+                [point.height / MAP_SCALER for point in row]
+                for row in self.terrain_points
+            ]
+        )
+
     def set_height(self, x: int, z: int, height: float) -> None:
         self.terrain_points[x, z].height = height
 
@@ -196,58 +204,67 @@ class TerrainHandler:
 
         logging.info("Terrain generation complete!")
 
-    def generate_upscaled_height_array(self, scale: int = 10) -> np.ndarray:
-        """Upscales the height array by a factor of scale, with intermediate
-        points linearly interpolated between the original points.
+    # def _generate_upscaled_height_array(
+    #     self, scale: int = 10
+    # ) -> tuple[np.ndarray, int, int]:
+    #     """Upscales the height array by a factor of scale, with intermediate
+    #     points linearly interpolated between the original points.
 
-        Args:
-            scale (int, optional): Scale to apply in each direction. Defaults to 10 (
-            turns 256x256 into 2560x2560).
+    #     Args:
+    #         scale (int, optional): Scale to apply in each direction. Defaults to 10 (
+    #         turns 256x256 into 2560x2560).
 
-        Returns:
-            np.ndarray: Upscaled 2 dimensional height array
-        """
-        # Create original height array
-        height_array = np.zeros((self.width, self.length))
-        for x in range(self.width):
-            for z in range(self.length):
-                height_array[x, z] = self.get_height(x, z)
+    #     Returns:
+    #         np.ndarray: Upscaled 2 dimensional height array
+    #         int: Width of the upscaled array
+    #         int: Length of the upscaled array
+    #     """
+    #     # Get original height array
+    #     height_array = self._get_height_2d_array()
+    #     logging.info("Terrain upscale: Got original height array")
 
-        # Create coordinate arrays for output
-        # Use scale-1 steps to ensure we hit exactly 0 and 1
-        x = np.linspace(0, self.width - 1, self.width * scale)
-        z = np.linspace(0, self.length - 1, self.length * scale)
+    #     # Create coordinate arrays for output
+    #     x = np.linspace(0, self.width - 1, self.width * scale)
+    #     z = np.linspace(0, self.length - 1, self.length * scale)
+    #     logging.info("Terrain upscale: Created coordinate arrays")
 
-        # Get integer and fractional parts
-        x0 = x.astype(np.int32)
-        z0 = z.astype(np.int32)
-        x1 = np.minimum(x0 + 1, self.width - 1)
-        z1 = np.minimum(z0 + 1, self.length - 1)
-        xf = x - x0
-        zf = z - z0
+    #     # Get integer and fractional parts
+    #     x0 = x.astype(np.int32)
+    #     z0 = z.astype(np.int32)
+    #     x1 = np.minimum(x0 + 1, self.width - 1)
+    #     z1 = np.minimum(z0 + 1, self.length - 1)
+    #     xf = x - x0
+    #     zf = z - z0
+    #     logging.info("Terrain upscale: Computed integer and fractional parts")
 
-        # Create output array
-        result = np.zeros((self.width * scale, self.length * scale))
+    #     # Create meshgrids for vectorized computation
+    #     XF, ZF = np.meshgrid(xf, zf, indexing="ij")
+    #     X0, Z0 = np.meshgrid(x0, z0, indexing="ij")
+    #     X1, Z1 = np.meshgrid(x1, z1, indexing="ij")
+    #     logging.info("Terrain upscale: Created meshgrids")
 
-        # Perform interpolation
-        for i in range(len(x)):
-            for j in range(len(z)):
-                # If we're exactly on an integer position, use the original value
-                if xf[i] == 0 and zf[j] == 0:
-                    result[i, j] = height_array[x0[i], z0[j]]
-                else:
-                    # Get corner values
-                    v00 = height_array[x0[i], z0[j]]
-                    v01 = height_array[x0[i], z1[j]]
-                    v10 = height_array[x1[i], z0[j]]
-                    v11 = height_array[x1[i], z1[j]]
+    #     # Get corner values using advanced indexing
+    #     v00 = height_array[X0, Z0]
+    #     v01 = height_array[X0, Z1]
+    #     v10 = height_array[X1, Z0]
+    #     v11 = height_array[X1, Z1]
+    #     logging.info("Got corner values")
 
-                    # Interpolate
-                    result[i, j] = (
-                        v00 * (1 - xf[i]) * (1 - zf[j])
-                        + v01 * (1 - xf[i]) * zf[j]
-                        + v10 * xf[i] * (1 - zf[j])
-                        + v11 * xf[i] * zf[j]
-                    )
+    #     # Vectorized bilinear interpolation
+    #     result = (
+    #         v00 * (1 - XF) * (1 - ZF)
+    #         + v01 * (1 - XF) * ZF
+    #         + v10 * XF * (1 - ZF)
+    #         + v11 * XF * ZF
+    #     )
+    #     logging.info("Terrain upscale: Completed bilinear interpolation")
 
-        return result
+    #     # Handle exact integer positions
+    #     exact_x = XF == 0
+    #     exact_z = ZF == 0
+    #     exact_points = exact_x & exact_z
+    #     if np.any(exact_points):
+    #         result[exact_points] = height_array[X0[exact_points], Z0[exact_points]]
+
+    #     logging.info("Terrain upscale: Completed height array upscaling")
+    #     return result, self.width * scale, self.length * scale
