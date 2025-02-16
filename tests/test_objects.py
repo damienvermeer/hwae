@@ -78,3 +78,55 @@ def test_get_water_mask():
         ]
     )
     np.testing.assert_array_equal(water_mask, expected_water)
+
+
+@patch("src.objects.ObjectHandler.__init__", lambda self, *args: None)
+def test_get_binary_transition_mask():
+    # Create object handler with mock terrain handler
+    obj_handler = ObjectHandler()
+    
+    # Test with a simple 4x4 binary mask:
+    # [0 0 0 0]
+    # [0 1 1 0]
+    # [0 1 1 0]
+    # [0 0 0 0]
+    input_mask = np.array([
+        [0, 0, 0, 0],
+        [0, 1, 1, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+    ])
+    
+    transition_mask = obj_handler._get_binary_transition_mask(input_mask)
+    
+    # Expected result - 1s at both horizontal and vertical transitions:
+    # [0 1 1 0]  # Top edge of the block
+    # [1 1 1 1]  # Left/right edges + interior
+    # [1 1 1 1]  # Left/right edges + interior
+    # [0 1 1 0]  # Bottom edge of the block
+    expected_mask = np.array([
+        [0, 1, 1, 0],  # Vertical transitions to row below
+        [1, 1, 1, 1],  # Horizontal transitions + vertical
+        [1, 1, 1, 1],  # Horizontal transitions + vertical
+        [0, 1, 1, 0],  # Vertical transitions to row above
+    ])
+    
+    np.testing.assert_array_equal(transition_mask, expected_mask)
+    
+    # Test with a more complex pattern:
+    # [0 1 0]
+    # [1 0 1]
+    # [0 1 0]
+    input_mask = np.array([
+        [0, 1, 0],
+        [1, 0, 1],
+        [0, 1, 0],
+    ])
+    
+    transition_mask = obj_handler._get_binary_transition_mask(input_mask)
+    
+    # Every cell should be marked as a transition since each cell
+    # has at least one different neighbor (horizontally or vertically)
+    expected_mask = np.ones((3, 3))
+    
+    np.testing.assert_array_equal(transition_mask, expected_mask)
