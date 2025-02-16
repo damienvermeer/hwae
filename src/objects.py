@@ -36,18 +36,29 @@ class ObjectHandler:
     ob3_interface: Ob3File
     noise_generator: NoiseGenerator
 
-    def add_scenery(self) -> None:
+    def __post_init__(self):
+        """Initialize the cached object mask"""
+        self._cached_object_mask = np.ones(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+
+    def add_scenery(self, map_size: str) -> None:
         """Adds a lot of random/different scenery objects to the level"""
+        # TODO in future, switch below on map size - the below seems reasonable
+        # ... for 'large' 256x256
         objs = (
             ["troprockcd"] * 8
             + ["troprockbd"] * 7
             + ["troprockad"] * 6
             + ["troprockcw"] * 5
             + ["troprockaw"] * 2
-            + ["palm1"] * 15
-            + ["plant1"] * 10
-            + ["palm2"] * 5
-            + ["palm3"] * 5
+            + ["palm1"] * 80
+            + ["plant1"] * 30
+            + ["palm2"] * 50
+            + ["palm3"] * 25
             + ["rubblea"] * 5
             + ["rubbleb"] * 5
             + ["rubblec"] * 5
@@ -66,36 +77,46 @@ class ObjectHandler:
         self, location_grid: np.ndarray, x: int, z: int, radius: int, set_to: int = 0
     ) -> None:
         """Updates the location grid to set_to in a radius around a location - used
-        for object location masking or similar
+        for object location masking or similar. Uses a simpler distance calculation
+        since we only need integer radius.
 
         Args:
             location_grid (np.ndarray): Location grid to set 0 within
             x (int): x location
             z (int): z location
-            radius (int): Radius to set within
+            radius (int): Radius to set within (must be integer)
             set_to (int): Value to set the location grid to
         """
-        # Create a circle mask around this point
-        # Get coordinates for points within radius
-        x_min = int(max(0, x - radius))
-        x_max = int(min(self.terrain_handler.width, x + radius + 1))
-        z_min = int(max(0, z - radius))
-        z_max = int(min(self.terrain_handler.length, z + radius + 1))
+        # Get bounds of the circle
+        x_min = max(0, x - radius)
+        x_max = min(self.terrain_handler.width, x + radius + 1)
+        z_min = max(0, z - radius)
+        z_max = min(self.terrain_handler.length, z + radius + 1)
 
-        # Create coordinate arrays for the circle region
-        x_coords, z_coords = np.meshgrid(
-            np.arange(x_min, x_max), np.arange(z_min, z_max), indexing="ij"
-        )
+        # For integer radius, we can just iterate through the square and check distance
+        radius_sq = radius * radius  # Square once instead of sqrt
+        for i in range(x_min, x_max):
+            dx = i - x
+            dx_sq = dx * dx
+            for j in range(z_min, z_max):
+                dz = j - z
+                # If point is within radius, set it
+                if dx_sq + dz * dz <= radius_sq:
+                    location_grid[i, j] = set_to
 
-        # Calculate distances from center point
-        distances = np.sqrt((x_coords - x) ** 2 + (z_coords - z) ** 2)
-
-        # Create a mask for points within the radius
-        mask = distances <= radius
-
-        # Apply the mask to set values
-        location_grid[x_min:x_max, z_min:z_max][mask] = set_to
         return location_grid
+
+    def _update_cached_object_mask(self, x: int, z: int, required_radius: int) -> None:
+        """Updates the cached object mask with a new object's radius
+
+        Args:
+            x (int): x location of new object
+            z (int): z location of new object
+            required_radius (int): radius to mark as occupied
+        """
+        self._cached_object_mask = self._update_mask_grid_with_radius(
+            self._cached_object_mask, x, z, required_radius, set_to=0
+        )
 
     def _get_binary_transition_mask(self, input_mask: np.ndarray) -> np.ndarray:
         """Generates a boolean edge transition mask, used for object radius checks
@@ -128,28 +149,13 @@ class ObjectHandler:
         return transition_mask
 
     def _get_object_mask(self) -> np.ndarray:
-        """Generates a boolean map grid, where 0 is within the bounds of an existing
-        object's required_radius, and 1 otherwise.
+        """Returns the cached object mask. The mask is maintained by _update_cached_object_mask
+        which is called whenever a new object is added.
 
         Returns:
-            np.ndarray: Object mask
+            np.ndarray: Object mask where 0 is occupied and 1 is free
         """
-        # start with all ones, then remove the area reserved by existing objects
-        mask = np.ones(
-            (
-                self.terrain_handler.width,
-                self.terrain_handler.length,
-            )
-        )
-        for obj in self.ob3_interface.objects:
-            # get object required radius info
-            x, z, required_radius = obj.get_required_radius_info()
-            # draw a circle of object's required radius at the objects location
-            mask = self._update_mask_grid_with_radius(
-                mask, x, z, required_radius, set_to=0
-            )
-        # and return the mask
-        return mask
+        return self._cached_object_mask
 
     def _get_land_mask(self, cutoff_height=-20) -> np.ndarray:
         """Generates a boolean map grid, where 1 is land and 0 is water via terrain
@@ -299,6 +305,10 @@ class ObjectHandler:
         center_z = self.terrain_handler.length / 2
         angle = np.rad2deg(np.arctan2(center_z - z, center_x - x))
         logging.info("ADD Carrier: Calculated location and angle")
+
+        # Update the cached object mask before adding the object
+        self._update_cached_object_mask(x, z, 30)
+
         # add directly via ob3 interface, as this is a bit special
         self.ob3_interface.add_object(
             object_type="Carrier",
@@ -340,6 +350,10 @@ class ObjectHandler:
         # check the height isnt negative, else its water so dont add
         if height + y_offset < 0:
             return
+
+        # Update the cached object mask before adding the object
+        self._update_cached_object_mask(x, z, int(required_radius))
+
         # now use the normal add object method
         self.ob3_interface.add_object(
             object_type=object_type,
@@ -349,3 +363,31 @@ class ObjectHandler:
             y_rotation=y_rotation,
             required_radius=required_radius,
         )
+
+    def add_scenery(self, map_size: str) -> None:
+        """Adds a lot of random/different scenery objects to the level"""
+        # TODO in future, switch below on map size - the below seems reasonable
+        # ... for 'large' 256x256
+        objs = (
+            ["troprockcd"] * 8
+            + ["troprockbd"] * 7
+            + ["troprockad"] * 6
+            + ["troprockcw"] * 5
+            + ["troprockaw"] * 2
+            + ["palm1"] * 80
+            + ["plant1"] * 30
+            + ["palm2"] * 50
+            + ["palm3"] * 25
+            + ["rubblea"] * 5
+            + ["rubbleb"] * 5
+            + ["rubblec"] * 5
+            + ["rubbled"] * 5
+            + ["rubblee"] * 5
+        )
+        for obj in objs:
+            self.add_object_on_land_random(
+                obj,
+                team=Team.NEUTRAL,
+                required_radius=2,
+            )
+        logging.info(f"Done adding {len(objs)} scenery objects")
