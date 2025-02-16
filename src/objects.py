@@ -323,6 +323,7 @@ class ObjectHandler:
         consider_zones: bool = False,
         consider_zone_extra_spacing: bool = False,
         in_zone: ZoneMarker = None,
+        extra_masks: np.ndarray = None,
     ) -> tuple[float, float]:
         """Finds a random location on the land for the specified object. Will avoid
         clashing with other objects within their object's radius, including the
@@ -339,6 +340,7 @@ class ObjectHandler:
             consider_zone_extra_spacing (bool, optional): Whether to consider extra
             ...spacing around zones. Defaults to False.
             in_zone (ZoneMarker, optional): Zone to place the object in. Defaults to None.
+            extra_masks (np.ndarray, optional): Array of masks to consider. Defaults to None.
 
         Returns:
             tuple[float, float]: x,z location of the object
@@ -358,6 +360,8 @@ class ObjectHandler:
             mask *= self._get_all_zone_mask()
         if consider_zone_extra_spacing:
             mask *= self._get_zone_seperation_mask()
+        if extra_masks is not None:
+            mask *= extra_masks
 
         # check if we have a zone to place the object in
         if in_zone is not None:
@@ -384,14 +388,23 @@ class ObjectHandler:
         logging.info("Find location: no suitable location found (empty mask)")
         return None
 
-    def add_carrier(self) -> None:
+    def add_carrier_and_return_mask(
+        self, required_radius: int = 30, mask_radius: int = 70
+    ) -> np.ndarray:
         """Finds a location for the carrier, by using a coast search with a large
         required radius, then adds the object directly (special as it also sets the
         rotation of the object)
+
+        Args:
+            required_radius (int, optional): Required radius of the carrier. Defaults to 30.
+            mask_radius (int, optional): Radius of the mask. Defaults to 70.
+
+        Returns:
+            np.ndarray: Mask in the carrier's radius for placing extra objects/zones
         """
         # find a coast location
         logging.info("ADD Carrier: Starting")
-        x, z = self._find_location(where=LocationEnum.COAST, required_radius=30)
+        x, z = self._find_location(where=LocationEnum.COAST, required_radius=required_radius)
 
         # Calculate angle from north to inward-facing vector
         center_x = self.terrain_handler.width / 2
@@ -400,7 +413,7 @@ class ObjectHandler:
         logging.info("ADD Carrier: Calculated location and angle")
 
         # Update the cached object mask before adding the object
-        self._update_cached_object_mask(x, z, 30)
+        self._update_cached_object_mask(x, z, required_radius)
 
         # add directly via ob3 interface, as this is a bit special
         self.ob3_interface.add_object(
@@ -410,7 +423,21 @@ class ObjectHandler:
             y_rotation=angle,
             required_radius=30,
         )
-        logging.info("ADD Carrier: Done")
+        logging.info("ADD Carrier: Calculating mask...")
+        # start with array of 0s (assume radius is small)
+        mask = np.zeros(
+            (self.terrain_handler.width, self.terrain_handler.length), dtype=np.uint8
+        )
+        # then loop through and set 1 for locations within radius
+        for i in range(self.terrain_handler.width):
+            for j in range(self.terrain_handler.length):
+                # if inside the radius, set 1
+                if (i - x) ** 2 + (j - z) ** 2 <= mask_radius**2:
+                    mask[i, j] = 1
+                # if inside the object's required_radius, set 0 (avoid clash)
+                if (i - x) ** 2 + (j - z) ** 2 <= required_radius**2:
+                    mask[i, j] = 0
+        return mask
 
     def add_object_template_on_land_random(
         self,
@@ -549,13 +576,19 @@ class ObjectHandler:
         logging.info(f"Done adding {len(objs)} scenery objects")
 
     def add_zone(
-        self, zone_type: ZoneType, zone_size: ZoneSize, zone_special: ZoneSpecial
+        self,
+        zone_type: ZoneType,
+        zone_size: ZoneSize,
+        zone_special: ZoneSpecial,
+        extra_masks: Optional[np.ndarray] = None,
     ) -> None:
         """Adds a zone marker to the map based on the size via a lookup.
 
         Args:
             zone_type (ZoneType): Type of zone to create
             zone_size (ZoneSize): Size of the zone to create
+            zone_special (ZoneSpecial): Special type for the zone
+            extra_masks (Optional[np.ndarray], optional): Additional mask to consider for placement. Defaults to None.
         """
         # create zone marker object and store it
         new_zone = ZoneMarker(
@@ -573,6 +606,7 @@ class ObjectHandler:
             consider_objects=False,
             consider_zones=True,
             consider_zone_extra_spacing=True,
+            extra_masks=extra_masks,
         )
         # and update the zone marker with the actual location
         if location is not None:

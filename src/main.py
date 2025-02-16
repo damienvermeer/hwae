@@ -21,7 +21,7 @@ from objects import ObjectHandler, Team
 from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
-from zones import ZoneManager
+from zones import ZoneManager, ZoneType, ZoneSize, ZoneSpecial
 
 logging.basicConfig(level=logging.INFO)
 
@@ -73,11 +73,18 @@ def main():
     # create an objecthandler
     object_handler = ObjectHandler(terrain_handler, ob3_data, noise_generator)
     # add carrier first as it needs to be object id 1 for common .ars logic
-    object_handler.add_carrier()
+    carrier_mask = object_handler.add_carrier_and_return_mask()
 
     # STEP xxx - SELECT ZONES, COLOUR & FLATTEN TERRAIN
     num_zones = noise_generator.randint(4, 11)
     zone_manager = ZoneManager(object_handler, noise_generator)
+    # add a small scrap zone near the carrier - so the player has some EJ
+    object_handler.add_zone(
+        ZoneType.SCRAP,
+        ZoneSize.SMALL,
+        ZoneSpecial.NONE,
+        extra_masks=carrier_mask,
+    )
     zone_manager.generate_random_zones(num_zones)
     for zone in object_handler.zones:
         terrain_handler.apply_texture_based_on_zone(zone)

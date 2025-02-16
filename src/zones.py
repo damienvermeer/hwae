@@ -110,4 +110,6 @@ class ZoneManager:
                 self.special_zones_allocated.append(zone_special)
 
             # finally add the zone
-            self.object_handler.add_zone(zone_type, zone_size, zone_special)
+            self.object_handler.add_zone(
+                zone_type, zone_size, zone_special, extra_masks=None
+            )
