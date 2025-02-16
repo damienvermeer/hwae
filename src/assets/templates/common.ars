@@ -25,3 +25,11 @@ Action: AIScript_RunAIScript
 Action: AIScript_RunAIScript
   AIS_RESPOND_TO_THREATS
 }
+
+Trigger: "HWAE carrier death" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+{
+Condition: AIScript_SpecificUnitDeath
+  1
+Action: AIScript_Defeat
+  AIS_SPECIFICPLAYER : 0
+}
