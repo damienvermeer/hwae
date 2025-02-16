@@ -7,8 +7,7 @@ Python package (released as a pyinstaller exe) to generate additional maps for H
 import logging
 import shutil
 from pathlib import Path
-import cProfile
-import pstats
+import os
 
 from fileio.cfg import CfgFile
 from fileio.lev import LevFile
@@ -42,6 +41,7 @@ def main():
     ars_data = ArsFile(template_root / "common.ars")
     ob3_data = Ob3File("")  # no template ob3 required
     # S0U file is basic for now - we have merged everything into a single file
+    os.makedirs(OUTPUT_PATH / NEW_LEVEL_NAME, exist_ok=True)
     shutil.copy(
         template_root / "common.s0u",
         OUTPUT_PATH / NEW_LEVEL_NAME / f"{NEW_LEVEL_NAME}.s0u",

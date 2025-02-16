@@ -1905,6 +1905,7 @@ NGLOD "Objects\friendly\Carrier\carrier.s01" (ZFRAC 0.4)
 NANIM "Objects\friendly\Carrier\carrier.m01"
 NSIMP "Objects\friendly\Carrier\carrier simp.s01"
 NVALU "CONTROL MATERIAL CARRIER NOVOC"
+RBASE	"[DeadCarrier]"
 
 
 [palm1]
