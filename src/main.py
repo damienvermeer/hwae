@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 if __name__ == "__main__":
     # TODO somehow specify the output location
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=113)
+    noise_generator = NoiseGenerator(seed=10)
 
     # TODO select a template
     # select large template root
@@ -45,19 +45,51 @@ if __name__ == "__main__":
     terrain_handler.set_terrain_from_noise()
     # create an objecthandler
     object_handler = ObjectHandler(terrain_handler, ob3_data, noise_generator)
-    cruiser_loc, y_rotation = object_handler.find_location_for_cruiser()
-    print(cruiser_loc, y_rotation)
-    object_handler.add_object(
-        "Carrier",
-        location=cruiser_loc,
-        team=Team.PLAYER,
-        y_rotation=y_rotation,
-    )
-    for _ in range(25):
+    # start adding objects - add carrier first as it needs to be object 0 for
+    # ... common ars logic
+    object_handler.add_carrier()
+
+    # TESTING - draw an assortment of random units (without clustering)
+    # for _ in range(10):
+    #     object_handler.add_object_on_land_random(
+    #         "AlienTower",
+    #         team=Team.ENEMY,
+    #         required_radius=5,
+    #         attachment_type="WallLaser",
+    #     )
+    # for _ in range(3):
+    #     object_handler.add_object_on_land_random(
+    #         "AlienTower",
+    #         team=Team.ENEMY,
+    #         required_radius=5,
+    #         attachment_type="LightningGun",
+    #     )
+    for _ in range(3):
         object_handler.add_object_on_land_random(
-            "AlienTower" if np.random.random() > 0.5 else "SmallFlyer",
+            "ALIENGROUNDPROD",
             team=Team.ENEMY,
+            required_radius=15,
         )
+    for _ in range(6):
+        object_handler.add_object_on_land_random(
+            "ALIENPUMP",
+            team=Team.ENEMY,
+            required_radius=15,
+        )
+    for _ in range(6):
+        object_handler.add_object_on_land_random(
+            "alienpowerstore",
+            team=Team.ENEMY,
+            required_radius=15,
+        )
+    for _ in range(6):
+        object_handler.add_object_on_land_random(
+            "LightWalker",
+            team=Team.ENEMY,
+            required_radius=2,
+        )
+
+    object_handler.add_scenery()
 
     # object_handler.add_object(
     #     "ALIENGROUNDPROD",
