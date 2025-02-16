@@ -5,8 +5,10 @@ Python package (released as a pyinstaller exe) to generate additional maps for H
 """
 
 import logging
-import numpy as np
+import shutil
 from pathlib import Path
+import cProfile
+import pstats
 
 from fileio.cfg import CfgFile
 from fileio.lev import LevFile
@@ -21,33 +23,70 @@ from minimap import generate_minimap
 
 logging.basicConfig(level=logging.INFO)
 
-if __name__ == "__main__":
+
+def main():
     # TODO somehow specify the output location
+    OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
     noise_generator = NoiseGenerator(seed=10)
 
-    # TODO select a template
-    # select large template root
+    # TODO select from alternative map sizes - only large (L22, 256*256) for now
+    map_size_template = "large"
     template_root = Path(__file__).resolve().parent / "assets" / "templates"
+    texture_root = Path(__file__).resolve().parent / "assets" / "textures"
 
-    # Create fileio objects we need to create the level
-    cfg_data = CfgFile(template_root / "large.cfg")
-    lev_data = LevFile(template_root / "large.lev")
+    # STEP 1 - SET UP FILE OBJECTS AND COPY FILES WE DONT NEED TO MODIFY
+    # Create all the file objects we need for the level
+    cfg_data = CfgFile(template_root / f"{map_size_template}.cfg")
+    lev_data = LevFile(template_root / f"{map_size_template}.lev")
     ars_data = ArsFile(template_root / "common.ars")
-    ob3_data = Ob3File("")  # we dont need to load an existing ob3
-
-    # select texture group
-    select_map_texture_group(
-        cfg_data, noise_generator, rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}"
+    ob3_data = Ob3File("")  # no template ob3 required
+    # S0U file is basic for now - we have merged everything into a single file
+    shutil.copy(
+        template_root / "common.s0u",
+        OUTPUT_PATH / NEW_LEVEL_NAME / f"{NEW_LEVEL_NAME}.s0u",
     )
-    # select terrain heights
+    # TODO .ait text file
+
+    # STEP 2 - PREPARE TERRAIN AND SET TERRAIN TEXTURES
+    # select a random texture group from the texture directory, copy it to the
+    # ... new map location and load the texture info into the CFG (for minimap)
+    select_map_texture_group(
+        path_to_textures=texture_root,
+        cfg=cfg_data,
+        noise_gen=noise_generator,
+        paste_textures_path=OUTPUT_PATH / NEW_LEVEL_NAME,
+    )
+    # create a terrain handler and set the terrain from noise
     terrain_handler = TerrainHandler(lev_data, noise_generator)
     terrain_handler.set_terrain_from_noise()
+
+    # STEP 3 - POPULATE THE MAP WITH OBJECTS
     # create an objecthandler
     object_handler = ObjectHandler(terrain_handler, ob3_data, noise_generator)
-    # start adding objects - add carrier first as it needs to be object 0 for
-    # ... common ars logic
+    # add carrier first as it needs to be object id 1 for common .ars logic
     object_handler.add_carrier()
+    object_handler.add_scenery(map_size=map_size_template)
+
+    # STEP 4 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
+    generate_minimap(
+        terrain_handler, cfg_data, OUTPUT_PATH / NEW_LEVEL_NAME / "map.pcx"
+    )
+    # STEP 5 - SAVE ALL FILES TO OUTPUT LOCATION
+    for file in [lev_data, cfg_data, ob3_data, ars_data]:
+        file.save(OUTPUT_PATH / NEW_LEVEL_NAME, NEW_LEVEL_NAME)
+
+
+if __name__ == "__main__":
+    profiler = cProfile.Profile()
+    profiler.enable()
+
+    main()
+
+    profiler.disable()
+    stats = pstats.Stats(profiler)
+    stats.sort_stats("cumulative")
+    stats.dump_stats("profile_output.prof")  # Can be viewed with snakeviz
 
     # TESTING - draw an assortment of random units (without clustering)
     # for _ in range(10):
@@ -64,32 +103,30 @@ if __name__ == "__main__":
     #         required_radius=5,
     #         attachment_type="LightningGun",
     #     )
-    for _ in range(3):
-        object_handler.add_object_on_land_random(
-            "ALIENGROUNDPROD",
-            team=Team.ENEMY,
-            required_radius=15,
-        )
-    for _ in range(6):
-        object_handler.add_object_on_land_random(
-            "ALIENPUMP",
-            team=Team.ENEMY,
-            required_radius=15,
-        )
-    for _ in range(6):
-        object_handler.add_object_on_land_random(
-            "alienpowerstore",
-            team=Team.ENEMY,
-            required_radius=15,
-        )
-    for _ in range(6):
-        object_handler.add_object_on_land_random(
-            "LightWalker",
-            team=Team.ENEMY,
-            required_radius=2,
-        )
-
-    object_handler.add_scenery()
+    # for _ in range(3):
+    #     object_handler.add_object_on_land_random(
+    #         "ALIENGROUNDPROD",
+    #         team=Team.ENEMY,
+    #         required_radius=15,
+    #     )
+    # for _ in range(6):
+    #     object_handler.add_object_on_land_random(
+    #         "ALIENPUMP",
+    #         team=Team.ENEMY,
+    #         required_radius=15,
+    #     )
+    # for _ in range(6):
+    #     object_handler.add_object_on_land_random(
+    #         "alienpowerstore",
+    #         team=Team.ENEMY,
+    #         required_radius=15,
+    #     )
+    # for _ in range(6):
+    #     object_handler.add_object_on_land_random(
+    #         "LightWalker",
+    #         team=Team.ENEMY,
+    #         required_radius=2,
+    #     )
 
     # object_handler.add_object(
     #     "ALIENGROUNDPROD",
@@ -101,9 +138,3 @@ if __name__ == "__main__":
     #     "ALIENGROUNDPROD", location_x=256 / 2, location_z=256 / 2, team=1
     # )
     # create minimap
-    generate_minimap(
-        terrain_handler, cfg_data, rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}\map.pcx"
-    )
-    # save all files
-    for file in [lev_data, cfg_data, ob3_data, ars_data]:
-        file.save(rf"C:\HWAR\HWAR\modtest2\{NEW_LEVEL_NAME}", NEW_LEVEL_NAME)
