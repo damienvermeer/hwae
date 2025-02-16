@@ -61,41 +61,47 @@ def main():
     terrain_handler = TerrainHandler(lev_data, noise_generator)
     terrain_handler.set_terrain_from_noise()
 
-    # STEP 3 - POPULATE THE MAP WITH OBJECTS
+    # STEP 5 - CHOOSE THE MISSION TYPE
+    # TODO - for now, we just have the "destroy_all" type
+    mission_type = "destroy_all"
+    ars_data.load_additional_data(template_root / f"{mission_type}.ars")
+
+    # STEP 4 - POPULATE THE MAP WITH OBJECTS
     # create an objecthandler
     object_handler = ObjectHandler(terrain_handler, ob3_data, noise_generator)
     # add carrier first as it needs to be object id 1 for common .ars logic
     object_handler.add_carrier()
-    object_handler.add_scenery(map_size=map_size_template)
+    # object_handler.add_scenery(map_size=map_size_template)
+    # for _ in range(2):
+    object_handler.add_object_on_land_random(
+        "AlienTower",
+        team=Team.ENEMY,
+        required_radius=5,
+        attachment_type="",
+    )
 
-    # STEP 4 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
+    # STEP 5 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
     generate_minimap(
         terrain_handler, cfg_data, OUTPUT_PATH / NEW_LEVEL_NAME / "map.pcx"
     )
-    # STEP 5 - SAVE ALL FILES TO OUTPUT LOCATION
+    # STEP 6 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data]:
         file.save(OUTPUT_PATH / NEW_LEVEL_NAME, NEW_LEVEL_NAME)
 
 
 if __name__ == "__main__":
-    profiler = cProfile.Profile()
-    profiler.enable()
+    # profiler = cProfile.Profile()
+    # profiler.enable()
 
     main()
 
-    profiler.disable()
-    stats = pstats.Stats(profiler)
-    stats.sort_stats("cumulative")
-    stats.dump_stats("profile_output.prof")  # Can be viewed with snakeviz
+    # profiler.disable()
+    # stats = pstats.Stats(profiler)
+    # stats.sort_stats("cumulative")
+    # stats.dump_stats("profile_output.prof")  # Can be viewed with snakeviz
 
     # TESTING - draw an assortment of random units (without clustering)
-    # for _ in range(10):
-    #     object_handler.add_object_on_land_random(
-    #         "AlienTower",
-    #         team=Team.ENEMY,
-    #         required_radius=5,
-    #         attachment_type="WallLaser",
-    #     )
+
     # for _ in range(3):
     #     object_handler.add_object_on_land_random(
     #         "AlienTower",
