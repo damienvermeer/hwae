@@ -10,5 +10,9 @@ sandystone.pcx  0.500, 65,56,40, 64,80,48, 0.000, MUD
 paving.pcx  0.500, 90,93,79, 0,0,0, 0.000, CONCRETE
 ; next hills/peak
 troprock1.pcx  0.500, 81,73,53, 0,0,0, 0.000, ROCK
-; next high peaks/mountains
+; ZONES: Base
 whitesnow.pcx  0.743, 255,249,250, 0,0,0, 0.000, SNOW
+orange1.pcx  0.500, 122,56,21, 0,0,0, 0.000, ALIENBLOOD
+; ZONES: Scrap
+l2tarm.pcx  0.500, 108,105,87, 0,0,0, 0.000, CONCRETE
+l2tarm2.pcx  0.500, 99,93,70, 0,0,0, 0.000, CONCRETE

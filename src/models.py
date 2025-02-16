@@ -1,12 +1,76 @@
 from dataclasses import dataclass
-from enum import IntEnum
+from enum import IntEnum, auto
 
 
 class Team(IntEnum):
+    """Team enumeration for objects"""
+
     PLAYER = 0
     ENEMY = 1
-    # TODO support multiple teams (requires .for file likely)
-    NEUTRAL = 4294967295  # FFFF
+    NEUTRAL = 2
+
+
+class ZoneType(IntEnum):
+    """Type of zone"""
+
+    BASE = auto()
+    SCRAP = auto()
+
+
+class ZoneSize(IntEnum):
+    """Size of zone"""
+
+    SMALL = auto()
+    MEDIUM = auto()
+    LARGE = auto()
+    XLARGE = auto()
+
+
+class ZoneSpecial(IntEnum):
+    NONE = auto()
+    WEAPON_CRATE = auto()
+
+
+ZONE_SIZE_TO_RADIUS = {
+    ZoneSize.SMALL: 5,
+    ZoneSize.MEDIUM: 6,
+    ZoneSize.LARGE: 9,
+    ZoneSize.XLARGE: 11,
+}
+
+ZONE_TYPE_TO_TEXTURE_ID = {
+    ZoneType.BASE: 8,
+    ZoneType.SCRAP: 10,
+}
+
+
+@dataclass
+class ZoneMarker:
+    """Marker for a zone in the map"""
+
+    x: float
+    z: float
+    zone_type: ZoneType
+    zone_size: ZoneSize
+    zone_special: ZoneSpecial
+
+    @property
+    def radius(self) -> float:
+        """Returns the radius of the zone based on its size
+
+        Returns:
+            float: Radius in map units
+        """
+        return ZONE_SIZE_TO_RADIUS[self.zone_size]
+
+    @property
+    def texture_id(self) -> str:
+        """Returns the texture ID to use for this zone type
+
+        Returns:
+            str: Texture ID from the texture description file
+        """
+        return ZONE_TYPE_TO_TEXTURE_ID[self.zone_type]
 
 
 @dataclass

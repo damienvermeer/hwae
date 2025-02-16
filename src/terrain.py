@@ -8,13 +8,19 @@ Contains all info regarding terrain for the level
 
 from dataclasses import dataclass
 import logging
-import noise
+import math
+from enum import IntEnum, auto
+from pathlib import Path
+from typing import Any, Optional
+
+from PIL import Image
+import numpy as np
+
 from src.fileio.lev import LevFile
 from src.fileio.ob3 import MAP_SCALER
 from src.noisegen import NoiseGenerator
-import numpy as np
+from src.models import ZoneMarker
 import os
-from PIL import Image
 
 
 @dataclass
@@ -203,6 +209,48 @@ class TerrainHandler:
                     self.terrain_points[x, y].mat = 6  # peaks
 
         logging.info("Terrain generation complete!")
+
+    def apply_texture_based_on_zone(self, zone: ZoneMarker) -> None:
+        """Applies the texture with texture_id in the radius defined by the zone
+        object (used for setting special textures like pavement/alien blood etc)
+
+        Args:
+            zone (ZoneMarker): Zone object defining the radius and texture
+        """
+        # first select all the terrain points which are within a radius of the zone
+        # ... location
+        logging.info("Applying zone texture: Selecting terrain points within radius")
+        for x in range(self.width):
+            for y in range(self.length):
+                if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
+                    # slight chance to use a different texture
+                    texture_offset = self.noise_gen.randint(0, 5) // 4
+                    self.terrain_points[x, y].mat = zone.texture_id + texture_offset
+        logging.info("Applying zone texture: Completed")
+
+    def flatten_terrain_based_on_zone(self, zone: ZoneMarker) -> None:
+        """Flattens the terrain based on the zone radius
+
+        Args:
+            zone (ZoneMarker): Zone object defining the radius
+        """
+        # find the average height of the terrain within the zone
+        logging.info("Zone: Flattening terrain: Finding average height")
+        avg_height = 0
+        count = 0
+        for x in range(self.width):
+            for y in range(self.length):
+                if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
+                    avg_height += self.terrain_points[x, y].height
+                    count += 1
+        avg_height /= count
+        logging.info("Zone: Flattening terrain: Found average height")
+        # set the height of all points within the zone to the average height
+        for x in range(self.width):
+            for y in range(self.length):
+                if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
+                    self.terrain_points[x, y].height = avg_height
+        logging.info("Zone: Flattening terrain: Completed")
 
     # def _generate_upscaled_height_array(
     #     self, scale: int = 10

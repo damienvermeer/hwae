@@ -21,6 +21,7 @@ from objects import ObjectHandler, Team
 from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
+from zones import ZoneManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,7 +30,7 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=10)
+    noise_generator = NoiseGenerator(seed=11)
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -68,27 +69,45 @@ def main():
     mission_type = "destroy_all"
     ars_data.load_additional_data(template_root / f"{mission_type}.ars")
 
-    # STEP 4 - POPULATE THE MAP WITH OBJECTS
+    # STEP xxx - CREATE AN OBJECT HANDLER
     # create an objecthandler
     object_handler = ObjectHandler(terrain_handler, ob3_data, noise_generator)
     # add carrier first as it needs to be object id 1 for common .ars logic
     object_handler.add_carrier()
-    # object_handler.add_scenery(map_size=map_size_template)
-    for _ in range(5):
+
+    # STEP xxx - SELECT ZONES, COLOUR & FLATTEN TERRAIN
+    num_zones = noise_generator.randint(4, 11)
+    zone_manager = ZoneManager(object_handler, noise_generator)
+    zone_manager.generate_random_zones(num_zones)
+    for zone in object_handler.zones:
+        terrain_handler.apply_texture_based_on_zone(zone)
+        terrain_handler.flatten_terrain_based_on_zone(zone)
         object_handler.add_object_on_land_random(
             "AlienTower",
             team=Team.ENEMY,
             required_radius=5,
             attachment_type="",
+            in_zone=zone,
         )
+
+    # STEP XXX - POPULATE THE MAP WITH OBJECTS
+
+    # object_handler.add_scenery(map_size=map_size_template)
+    for _ in range(5):
+        # object_handler.add_object_on_land_random(
+        #     "AlienTower",
+        #     team=Team.ENEMY,
+        #     required_radius=5,
+        #     attachment_type="",
+        # )
         object_handler.add_object_template_on_land_random(
             ot.TEMPLATE_ALIEN_AA,
         )
-    object_handler.add_object_on_land_random(
-        "recharge_crate",
-        team=Team.NEUTRAL,
-        required_radius=1,
-    )
+    # object_handler.add_object_on_land_random(
+    #     "recharge_crate",
+    #     team=Team.NEUTRAL,
+    #     required_radius=1,
+    # )
 
     # STEP 5 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
     generate_minimap(

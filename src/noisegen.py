@@ -120,3 +120,20 @@ class NoiseGenerator:
         else:
             k = min_n if min_n == max_n else self.randint(min_n, max_n)
         return random.sample(in_list, k=k)
+
+    def select_random_from_weighted_dict(self, in_dict: dict) -> object:
+        """Selects a random object from a dictionary, where the values are weights
+
+        Args:
+            in_dict (dict): Dictionary to select from, where keys are items and values
+                are their weights/likelihoods
+
+        Returns:
+            object: Random object from the dictionary, weighted by the likelihood values
+        """
+        # Create a flat list where each key appears value times
+        weighted_keys = []
+        for key, weight in in_dict.items():
+            weighted_keys.extend([key] * weight)
+        # Select randomly from this weighted list
+        return self.select_random_from_list(weighted_keys)

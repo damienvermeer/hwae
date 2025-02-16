@@ -8,13 +8,24 @@ Contains all info regarding objects for the level
 
 from dataclasses import dataclass
 import logging
-import numpy as np
+import math
+import random
 from enum import IntEnum, auto
+from pathlib import Path
+from typing import Optional
 from typing import Union
+import numpy as np
 
 from src.fileio.ob3 import Ob3File, MAP_SCALER
 from src.noisegen import NoiseGenerator
-from src.models import Team, ObjectContainer
+from src.models import (
+    Team,
+    ZoneType,
+    ZoneSize,
+    ZoneMarker,
+    ObjectContainer,
+    ZoneSpecial,
+)
 from src.terrain import TerrainHandler
 
 
@@ -22,10 +33,6 @@ class LocationEnum(IntEnum):
     LAND = auto()
     WATER = auto()
     COAST = auto()
-
-
-class ObjectType(IntEnum):
-    pass
 
 
 @dataclass
@@ -42,6 +49,7 @@ class ObjectHandler:
                 self.terrain_handler.length,
             )
         )
+        self.zones = []
 
     def add_scenery(self, map_size: str) -> None:
         """Adds a lot of random/different scenery objects to the level"""
@@ -155,6 +163,70 @@ class ObjectHandler:
         """
         return self._cached_object_mask
 
+    def _get_zone_seperation_mask(self) -> np.ndarray:
+        """Returns a mask where 0 is free space and 1 is occupied space, used for
+        zone separation (e.g. making sure there is reasonable space between zones)
+
+        Returns:
+            np.ndarray: Zone seperation mask
+        """
+        # start with all 1s (e.g. all area is permitted)
+        zone_seperation_mask = np.ones(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+        # then check each zone (remove the zone from each)
+        FIXED_ZONE_SEPERATION = 40
+        for zone in self.zones:
+            zone_seperation_mask = self._update_mask_grid_with_radius(
+                zone_seperation_mask, zone.x, zone.z, FIXED_ZONE_SEPERATION, set_to=0
+            )
+        return zone_seperation_mask
+
+    def _get_all_zone_mask(self) -> np.ndarray:
+        """Returns the cached zone mask. The mask is not maintained by a cache and
+        is calculated each time from scratch
+
+        Returns:
+            np.ndarray: Zone mask where 0 is occupied and 1 is free
+        """
+        # start with all 1s (e.g. all area is permitted)
+        zone_mask = np.ones(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+        # then check each zone (remove the zone from each)
+        for zone in self.zones:
+            zone_mask = self._update_mask_grid_with_radius(
+                zone_mask, zone.x, zone.z, zone.radius, set_to=0
+            )
+        return zone_mask
+
+    def _get_zone_mask_for_zone_objects(self, zone: ZoneMarker) -> np.ndarray:
+        """Returns the zone mask based on the zone radius (for placing objects
+        inside a zone)
+
+        Args:
+            zone (ZoneMarker): Zone object defining the radius
+
+        Returns:
+            np.ndarray: Zone mask where 0 is occupied and 1 is free
+        """
+        zone_mask = np.zeros(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+        zone_mask = self._update_mask_grid_with_radius(
+            zone_mask, zone.x, zone.z, zone.radius, set_to=1
+        )
+        return zone_mask
+
     def _get_land_mask(self, cutoff_height=-20) -> np.ndarray:
         """Generates a boolean map grid, where 1 is land and 0 is water via terrain
         lookup. Is returned in the same dimensions as the terrain (e.g. LEV scale).
@@ -244,7 +316,13 @@ class ObjectHandler:
         return mask * self._get_water_mask(cutoff_height=cutoff_height)
 
     def _find_location(
-        self, where: LocationEnum = LocationEnum.LAND, required_radius: float = 1
+        self,
+        where: LocationEnum = LocationEnum.LAND,
+        required_radius: float = 1,
+        consider_objects: bool = True,
+        consider_zones: bool = False,
+        consider_zone_extra_spacing: bool = False,
+        in_zone: ZoneMarker = None,
     ) -> tuple[float, float]:
         """Finds a random location on the land for the specified object. Will avoid
         clashing with other objects within their object's radius, including the
@@ -253,20 +331,37 @@ class ObjectHandler:
         Args:
             where (LocationEnum): Where to find the location (land, water, coast)
             required_radius (float, optional): Keep-clear radius of this new
-            object. Defaults to 1 (unit = the original LEV scale e.g. 256x256).
+            ...object. Defaults to 1 (unit = the original LEV scale e.g. 256x256).
+            consider_objects (bool, optional): Whether to consider other objects.
+            ...Defaults to True.
+            consider_zones (bool, optional): Whether to consider other zones.
+            ...Defaults to False.
+            consider_zone_extra_spacing (bool, optional): Whether to consider extra
+            ...spacing around zones. Defaults to False.
+            in_zone (ZoneMarker, optional): Zone to place the object in. Defaults to None.
 
         Returns:
             tuple[float, float]: x,z location of the object
         """
         # get correct reference mask from where
         if where == LocationEnum.WATER:
-            where_mask = self._get_water_mask()
+            mask = self._get_water_mask()
         elif where == LocationEnum.COAST:
-            where_mask = self._get_coast_mask()
+            mask = self._get_coast_mask()
         else:
-            where_mask = self._get_land_mask()
-        # and apply that mask
-        mask = where_mask * self._get_object_mask()
+            mask = self._get_land_mask()
+
+        # apply that mask to the other masks specified in the argument
+        if consider_objects:
+            mask *= self._get_object_mask()
+        if consider_zones:
+            mask *= self._get_all_zone_mask()
+        if consider_zone_extra_spacing:
+            mask *= self._get_zone_seperation_mask()
+
+        # check if we have a zone to place the object in
+        if in_zone is not None:
+            mask *= self._get_zone_mask_for_zone_objects(in_zone)
 
         # detect edges, and for each edge draw a circle of radius required_radius
         # ... (rounded up to closest int)
@@ -384,6 +479,7 @@ class ObjectHandler:
         y_offset: float = 0,
         y_rotation: float = 0,
         required_radius: float = 1,
+        in_zone: ZoneMarker = None,
     ) -> None:
         """Creates a new object in the level, selects a random land location, then
         uses the normal add object method with the height determined from the terrain
@@ -396,9 +492,12 @@ class ObjectHandler:
             y_rotation (float, optional): Rotation of the object in degrees. Defaults to 0.
             y_offset (float, optional): Vertical offset of the object. Defaults to 0.
             required_radius (float, optional): Keep-clear radius of this new object. Defaults to 1.
+            in_zone (ZoneMarker, optional): Zone to place the object in. Defaults to None.
         """
         # below defaults to add on land
-        returnval = self._find_location(required_radius=required_radius)
+        returnval = self._find_location(
+            required_radius=required_radius, in_zone=in_zone
+        )
         if returnval is None:
             return
         z, x = returnval
@@ -448,3 +547,39 @@ class ObjectHandler:
                 required_radius=2,
             )
         logging.info(f"Done adding {len(objs)} scenery objects")
+
+    def add_zone(
+        self, zone_type: ZoneType, zone_size: ZoneSize, zone_special: ZoneSpecial
+    ) -> None:
+        """Adds a zone marker to the map based on the size via a lookup.
+
+        Args:
+            zone_type (ZoneType): Type of zone to create
+            zone_size (ZoneSize): Size of the zone to create
+        """
+        # create zone marker object and store it
+        new_zone = ZoneMarker(
+            x=0,
+            z=0,
+            zone_type=zone_type,
+            zone_size=zone_size,
+            zone_special=zone_special,
+        )
+        # find a land location we can place the radius zone at (with some buffer)
+        # ... with special args to consider only other zones
+        location = self._find_location(
+            where=LocationEnum.LAND,
+            required_radius=new_zone.radius,
+            consider_objects=False,
+            consider_zones=True,
+            consider_zone_extra_spacing=True,
+        )
+        # and update the zone marker with the actual location
+        if location is not None:
+            new_zone.x = location[0]
+            new_zone.z = location[1]
+            self.zones.append(new_zone)
+            return
+        logging.info(
+            f"Could not find location for zone {zone_type} {zone_size} {zone_special}"
+        )
