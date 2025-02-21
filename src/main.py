@@ -13,6 +13,7 @@ from fileio.cfg import CfgFile
 from fileio.lev import LevFile
 from fileio.ob3 import Ob3File
 from fileio.ars import ArsFile
+from src.object_containers import ALL_BASE
 import src.object_templates as ot
 
 from construction import ConstructionManager
@@ -30,7 +31,7 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=0)
+    noise_generator = NoiseGenerator(seed=2)
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -80,6 +81,11 @@ def main():
     zone_manager = ZoneManager(object_handler, noise_generator)
     # add a small scrap zone near the carrier - so the player has some EJ
     object_handler.add_zone(
+        ZoneType.BASE,
+        ZoneSize.SMALL,
+        ZoneSpecial.NONE,
+    )
+    object_handler.add_zone(
         ZoneType.SCRAP,
         ZoneSize.SMALL,
         ZoneSpecial.NONE,
@@ -92,11 +98,16 @@ def main():
         object_handler.populate_zone(zone)
 
     # STEP XXX - POPULATE THE MAP WITH OTHER OBJECTS
-    object_handler.add_scenery(map_size=map_size_template)
-    for _ in range(5):
-        object_handler.add_object_template_on_land_random(
-            ot.TEMPLATE_ALIEN_AA, consider_zones=True
-        )
+    # object_handler.add_scenery(map_size=map_size_template)
+    # for _ in range(50):
+    #     obj = noise_generator.select_random_from_weighted_dict(ALL_BASE)
+    #     object_handler.add_object_on_land_random(
+    #         object_type=obj.object_type,
+    #         team=Team.ENEMY,
+    #         required_radius=obj.required_radius,
+    #         attachment_type=obj.attachment_type,
+    #         consider_zones=True,
+    #     )
     # object_handler.add_object_on_land_random(
     #     "recharge_crate",
     #     team=Team.NEUTRAL,
@@ -117,16 +128,15 @@ def main():
             template_root / "zone_specific" / "weapon_crate.ars"
         )
         spare_weapon = construction_manager.find_weapon_not_in_ars_build()
-        if spare_weapon is None:
-            return
-        ars_data.add_action_to_existing_record(
-            record_name="HWAE_zone_specific weapon ready",
-            action_title="AIScript_MakeAvailableForBuilding",
-            action_details=[
-                "AIS_SPECIFICPLAYER : 0",
-                f"AIS_UNITTYPE_SPECIFIC : {spare_weapon}",
-            ],
-        )
+        if spare_weapon is not None:
+            ars_data.add_action_to_existing_record(
+                record_name="HWAE_zone_specific weapon ready",
+                action_title="AIScript_MakeAvailableForBuilding",
+                action_details=[
+                    "AIS_SPECIFICPLAYER : 0",
+                    f"AIS_UNITTYPE_SPECIFIC : {spare_weapon}",
+                ],
+            )
 
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data]:

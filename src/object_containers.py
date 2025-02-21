@@ -31,7 +31,7 @@ BASE_BLAST_TOWER = ObjectContainer(
     object_type="BlastTower",
     team=Team.ENEMY,
     required_radius=1,
-    y_offset=5,
+    y_offset=7,
 )
 BASE_OIL_PUMP = ObjectContainer(
     object_type="ALIENPUMP",
@@ -42,7 +42,7 @@ BASE_ALIEN_POWER_STORE = ObjectContainer(
     object_type="alienpowerstore",
     team=Team.ENEMY,
     required_radius=2,
-    y_offset=4,
+    y_offset=7,
 )
 BASE_PRIORITY1 = {
     BASE_OIL_PUMP: 1,

@@ -238,10 +238,10 @@ class Ob3File:
         new_obj.object_type = object_type
         # NOTE: LEV vs OB3 has different scales. In OB3, the x and z values are
         # ... in 10x10 units, while in LEV they are 1x1 units.
-        # REVERTED STILL TESTING UPSAMPLING
-        new_obj._loc_x = location[0] * 10
+        # NOTE in OB3, the x and z axis are swapped
+        new_obj._loc_x = location[2] * 10
         new_obj._loc_y = location[1]
-        new_obj._loc_z = location[2] * 10
+        new_obj._loc_z = location[0] * 10
         # set attachment type and team
         new_obj.attachment_type = attachment_type
         new_obj.team_number = team

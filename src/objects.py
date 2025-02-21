@@ -178,7 +178,11 @@ class ObjectHandler:
         # then check each zone (remove the zone from each)
         for zone in self.zones:
             zone_mask = self._update_mask_grid_with_radius(
-                zone_mask, zone.x, zone.z, zone.radius, set_to=0
+                zone_mask,
+                zone.x,
+                zone.z,
+                zone.radius,
+                set_to=0,
             )
         return zone_mask
 
@@ -199,7 +203,11 @@ class ObjectHandler:
             )
         )
         zone_mask = self._update_mask_grid_with_radius(
-            zone_mask, zone.x, zone.z, zone.radius, set_to=1
+            zone_mask,
+            zone.x,
+            zone.z,
+            zone.radius,
+            set_to=1,
         )
         return zone_mask
 
@@ -321,13 +329,25 @@ class ObjectHandler:
         Returns:
             tuple[float, float]: x,z location of the object
         """
+        # start with all 1s
+        mask = np.ones(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+
+        # check if we have a zone to place the object in
+        if in_zone is not None:
+            mask *= self._get_zone_mask_for_zone_objects(in_zone)
+
         # get correct reference mask from where
         if where == LocationEnum.WATER:
-            mask = self._get_water_mask()
+            mask *= self._get_water_mask()
         elif where == LocationEnum.COAST:
-            mask = self._get_coast_mask()
+            mask *= self._get_coast_mask()
         else:
-            mask = self._get_land_mask()
+            mask *= self._get_land_mask()
 
         # apply that mask to the other masks specified in the argument
         if consider_objects:
@@ -338,10 +358,6 @@ class ObjectHandler:
             mask *= self._get_zone_seperation_mask()
         if extra_masks is not None:
             mask *= extra_masks
-
-        # check if we have a zone to place the object in
-        if in_zone is not None:
-            mask *= self._get_zone_mask_for_zone_objects(in_zone)
 
         # detect edges, and for each edge draw a circle of radius required_radius
         # ... (rounded up to closest int)
@@ -365,7 +381,7 @@ class ObjectHandler:
         return None
 
     def add_carrier_and_return_mask(
-        self, required_radius: int = 30, mask_radius: int = 70
+        self, required_radius: int = 30, mask_radius: int = 50
     ) -> np.ndarray:
         """Finds a location for the carrier, by using a coast search with a large
         required radius, then adds the object directly (special as it also sets the
@@ -380,7 +396,9 @@ class ObjectHandler:
         """
         # find a coast location
         logging.info("ADD Carrier: Starting")
-        x, z = self._find_location(
+        # SPECIAL FOR CARRIER FOR SOME REASON - flip x and z else gets placed
+        # ... in wrong location
+        z, x = self._find_location(
             where=LocationEnum.COAST, required_radius=required_radius
         )
 
@@ -396,7 +414,7 @@ class ObjectHandler:
         # add directly via ob3 interface, as this is a bit special
         self.ob3_interface.add_object(
             object_type="Carrier",
-            location=[z, 15, x],  # opposite order due to LEV flip
+            location=[x, 15, z],
             team=Team.PLAYER,
             y_rotation=angle,
             required_radius=30,
@@ -438,9 +456,9 @@ class ObjectHandler:
         )
         if returnval is None:
             return
-        z, x = returnval
+        x, z = returnval
         # find height at the specified x and z location (in LEV 3D space)
-        height = self.terrain_handler.get_height(z, x)
+        height = self.terrain_handler.get_height(x, z)
         # check the height isnt negative, else its water so dont add
         reference_object_y_offset = ref_object.y_offset
         if height + reference_object_y_offset < 0:
@@ -513,9 +531,9 @@ class ObjectHandler:
         )
         if returnval is None:
             return
-        z, x = returnval
+        x, z = returnval
         # find height at the specified x and z location (in LEV 3D space)
-        height = self.terrain_handler.get_height(z, x)
+        height = self.terrain_handler.get_height(x, z)
         # check the height isnt negative, else its water so dont add
         if height + y_offset < 0:
             return
@@ -599,6 +617,7 @@ class ObjectHandler:
         if location is not None:
             new_zone.x = location[0]
             new_zone.z = location[1]
+            # TODO do these need to be backwards?
             self.zones.append(new_zone)
             return
         logging.info(
@@ -617,7 +636,7 @@ class ObjectHandler:
         num_objects = ZONE_SIZE_TO_NUM_OBJECTS[zone.zone_size]
         if zone.zone_type == ZoneType.SCRAP:
             for _ in range(num_objects):
-                return # TODO REVERT
+                return  # TODO REVERT
                 # SCRAP ZONES SEEM TO CAUSE INSTABILITY?
                 # pick a random object from the dict
                 object_to_add = self.noise_generator.select_random_from_weighted_dict(
@@ -634,42 +653,32 @@ class ObjectHandler:
                 )
             return
         elif zone.zone_type == ZoneType.BASE:
+            # select a number from each priority list
             priority1_num = num_objects // 4
-            for _ in range(priority1_num):
-                object_to_add = self.noise_generator.select_random_from_weighted_dict(
-                    BASE_PRIORITY1
-                )
-                self.add_object_on_land_random(
-                    object_to_add.object_type,
-                    attachment_type=object_to_add.attachment_type,
-                    team=object_to_add.team,
-                    required_radius=object_to_add.required_radius,
-                    y_rotation=self.noise_generator.randint(0, 360),
-                    in_zone=zone,
-                )
+            priority_1_objs = [
+                self.noise_generator.select_random_from_weighted_dict(BASE_PRIORITY1)
+                for _ in range(priority1_num)
+            ]
             priority2_num = num_objects // 3
-            for _ in range(priority2_num):
-                object_to_add = self.noise_generator.select_random_from_weighted_dict(
-                    BASE_PRIORITY2
-                )
+            priority_2_objs = [
+                self.noise_generator.select_random_from_weighted_dict(BASE_PRIORITY2)
+                for _ in range(priority2_num)
+            ]
+            all_base_objs = [
+                self.noise_generator.select_random_from_weighted_dict(ALL_BASE)
+                for _ in range(num_objects - priority1_num - priority2_num)
+            ]
+            # put them in the zone, after sorting descending by radius
+            priority_1_objs.sort(key=lambda x: x.required_radius, reverse=True)
+            priority_2_objs.sort(key=lambda x: x.required_radius, reverse=True)
+            all_base_objs.sort(key=lambda x: x.required_radius, reverse=True)
+
+            for obj in priority_1_objs + priority_2_objs + all_base_objs:
                 self.add_object_on_land_random(
-                    object_to_add.object_type,
-                    attachment_type=object_to_add.attachment_type,
-                    team=object_to_add.team,
-                    required_radius=object_to_add.required_radius,
-                    y_rotation=self.noise_generator.randint(0, 360),
-                    in_zone=zone,
-                )
-            # and all other
-            for _ in range(num_objects - priority1_num - priority2_num):
-                object_to_add = self.noise_generator.select_random_from_weighted_dict(
-                    ALL_BASE
-                )
-                self.add_object_on_land_random(
-                    object_to_add.object_type,
-                    attachment_type=object_to_add.attachment_type,
-                    team=object_to_add.team,
-                    required_radius=object_to_add.required_radius,
+                    obj.object_type,
+                    attachment_type=obj.attachment_type,
+                    team=obj.team,
+                    required_radius=obj.required_radius,
                     y_rotation=self.noise_generator.randint(0, 360),
                     in_zone=zone,
                 )
