@@ -7,7 +7,7 @@ class Team(IntEnum):
 
     PLAYER = 0
     ENEMY = 1
-    NEUTRAL = 2
+    NEUTRAL = 4294967295  # 0xFFFFFFFF
 
 
 class ZoneType(IntEnum):
