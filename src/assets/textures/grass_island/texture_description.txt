@@ -11,7 +11,8 @@ paving.pcx  0.500, 90,93,79, 0,0,0, 0.000, CONCRETE
 ; next hills/peak
 troprock1.pcx  0.500, 81,73,53, 0,0,0, 0.000, ROCK
 ; ZONES: Base
-whitesnow.pcx  0.743, 255,249,250, 0,0,0, 0.000, SNOW
+browngrass.pcx  0.500, 85,73,48, 53,67,40, 0.000, GRASS
+alienfloor1.pcx  0.500, 24,16,12, 0,0,0, 0.000, ALIENDRY
 orange1.pcx  0.500, 122,56,21, 0,0,0, 0.000, ALIENBLOOD
 ; ZONES: Scrap
 l2tarm.pcx  0.500, 108,105,87, 0,0,0, 0.000, CONCRETE

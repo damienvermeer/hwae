@@ -224,7 +224,9 @@ class TerrainHandler:
             for y in range(self.length):
                 if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
                     # slight chance to use a different texture
-                    texture_offset = self.noise_gen.randint(0, 5) // 4
+                    texture_offset = self.noise_gen.select_random_from_list(
+                        [0] * 5 + [1] + [2]
+                    )
                     self.terrain_points[x, y].mat = zone.texture_id + texture_offset
         logging.info("Applying zone texture: Completed")
 
@@ -250,6 +252,18 @@ class TerrainHandler:
             for y in range(self.length):
                 if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
                     self.terrain_points[x, y].height = avg_height
+        # set all heights for the points 1 extra radius unit outside to the average
+        # .. between their current height and the average height (smoothing)
+        for x in range(self.width):
+            for y in range(self.length):
+                if (
+                    (zone.radius) ** 2
+                    <= (x - zone.x) ** 2 + (y - zone.z) ** 2
+                    <= (zone.radius + 2) ** 2
+                ):
+                    self.terrain_points[x, y].height = np.mean(
+                        [self.terrain_points[x, y].height, avg_height]
+                    )
         logging.info("Zone: Flattening terrain: Completed")
 
     # def _generate_upscaled_height_array(
