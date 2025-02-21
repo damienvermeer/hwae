@@ -680,6 +680,7 @@ class ObjectHandler:
                     team=obj.team,
                     required_radius=obj.required_radius,
                     y_rotation=self.noise_generator.randint(0, 360),
+                    y_offset=obj.y_offset,
                     in_zone=zone,
                 )
             return
