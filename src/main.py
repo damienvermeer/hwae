@@ -52,6 +52,13 @@ def main():
     )
     # TODO .ait text file
 
+    # STEP 6 - RANDOMLY UNLOCK VEHICLES/ADDONS/EJ
+    construction_manager = ConstructionManager(ars_data, noise_generator)
+    construction_manager.select_random_construction_availability()
+    # select a random EJ between 3000 to 8000 in blocks of 250
+    cfg_data["LevelCash"] = noise_generator.randint(12, 32) * 250
+    logging.info(f"Set EJ: {cfg_data['LevelCash']}")
+
     # STEP 2 - PREPARE TERRAIN AND SET TERRAIN TEXTURES
     # select a random texture group from the texture directory, copy it to the
     # ... new map location and load the texture info into the CFG (for minimap)
