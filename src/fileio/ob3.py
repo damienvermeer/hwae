@@ -66,9 +66,6 @@ class _OB3Object:
             self.object_type = self.object_type.rstrip(b"\x00").decode("ascii")
         if isinstance(self.attachment_type, bytes):
             self.attachment_type = self.attachment_type.rstrip(b"\x00").decode("ascii")
-        # set non-ob3 parameters, such as properties for the object when we are placing
-        # ... multiple objects and dont want to overlap them
-        self._required_radius = 1
         # complete other steps
         self.clean_object()
 
@@ -92,17 +89,6 @@ class _OB3Object:
         self.r3_a = s
         self.r3_b = 0
         self.r3_c = c
-
-    def get_required_radius_info(self) -> tuple[int, int, int]:
-        """Returns a tuple of (x, z, required_radius) from this object. Converts
-        into LEV units
-
-        Returns:
-            tuple[int, int, int]: (x, z, required_radius)
-        """
-        # NOTE - order looks wrong below, but this is due to the flip map effect
-        # ... of LEV files
-        return self._loc_z / 10, self._loc_x / 10, self._required_radius
 
     def clean_object(self) -> None:
         """Completes post-creation steps (create location vector, rotation matrix, etc.)
@@ -219,7 +205,6 @@ class Ob3File:
         attachment_type: str = "",
         team: int = 1,
         y_rotation: float = 0,
-        required_radius: float = 1,  # (not used in ob3 - for seperating objects)
     ) -> None:
         """Add a new object to the OB3 file.
 
@@ -229,8 +214,6 @@ class Ob3File:
             attachment_type (str): Type of attachment
             team (int): Team number (0=player, 1+=enemy, 0xFFFF=neutral)
             y_rotation (float): Rotation of the object in degrees
-            required_radius (float): Radius to keep objects away from each other. Not
-            a property of an ob3 object. Default is 1.
         """
         # create a new _OB3Object with its default values
         new_obj = _OB3Object()
@@ -249,8 +232,6 @@ class Ob3File:
         # set its id, which is the next available id
         # changed from 0 indexed to 1 indexed (ars is 1 indexed)
         new_obj.my_id = new_obj.renderable_id = len(self.objects) + 1
-        # set the radius keepout
-        new_obj._required_radius = required_radius
         # apply rotation
         new_obj.set_yaxis_rotation(y_rotation)
         # call clean object (to set location values etc)

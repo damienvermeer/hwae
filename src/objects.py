@@ -414,10 +414,16 @@ class ObjectHandler:
         # add directly via ob3 interface, as this is a bit special
         self.ob3_interface.add_object(
             object_type="Carrier",
-            location=[x, 15, z],
+            location=[x, 10, z],
             team=Team.PLAYER,
             y_rotation=angle,
-            required_radius=30,
+        )
+        # and add magpie
+        self.ob3_interface.add_object(
+            object_type="dedicatedlifter",
+            location=[x, 25, z],
+            team=Team.PLAYER,
+            y_rotation=angle,
         )
         logging.info("ADD Carrier: Calculating mask...")
         # start with array of 0s (assume radius is small)
@@ -474,7 +480,6 @@ class ObjectHandler:
             location=np.array([x, height + ref_object.y_offset, z]),
             attachment_type=ref_object.attachment_type,
             team=team.value if isinstance(team, Team) else team,
-            required_radius=ref_object.required_radius,
         )
 
         # START of template repeat (for additional objects defined in this template)
@@ -494,7 +499,6 @@ class ObjectHandler:
                 location=location,
                 attachment_type=obj_dict.attachment_type,
                 team=team.value if isinstance(team, Team) else team,
-                required_radius=obj_dict.required_radius,
             )
         logging.info(f"Added {len(object_template)} objects via template")
 
@@ -548,7 +552,6 @@ class ObjectHandler:
             attachment_type=attachment_type,
             team=team.value if isinstance(team, Team) else team,
             y_rotation=y_rotation,
-            required_radius=required_radius,
         )
 
     def add_scenery(self, map_size: str) -> None:
