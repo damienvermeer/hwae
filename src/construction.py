@@ -49,7 +49,6 @@ AVAILABLE_WEAPONS = [
     "EMP",
     "Laser",
     # ALWAYS IN "carrierguns",
-    "Cannon",
 ]
 AVAILABLE_ADDONS = [
     # ALWAYS IN "soulunit",
