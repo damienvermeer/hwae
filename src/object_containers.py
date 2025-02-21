@@ -1,10 +1,6 @@
 from src.models import (
     Team,
     ObjectContainer,
-    ZoneMarker,
-    ZoneSize,
-    ZoneType,
-    ZoneSpecial,
 )
 from enum import IntEnum, auto
 from dataclasses import dataclass
@@ -18,62 +14,35 @@ class Team(IntEnum):
     NEUTRAL = 2
 
 
-@dataclass
-class ZoneMarker:
-    """Marker for a zone in the map"""
-
-    x: float
-    z: float
-    zone_type: ZoneType
-    zone_size: ZoneSize
-    zone_special: ZoneSpecial
-
-    @property
-    def radius(self) -> float:
-        """Returns the radius of the zone based on its size
-
-        Returns:
-            float: Radius in map units
-        """
-        return ZONE_SIZE_TO_RADIUS[self.zone_size]
-
-    @property
-    def texture_id(self) -> str:
-        """Returns the texture ID to use for this zone type
-
-        Returns:
-            str: Texture ID from the texture description file
-        """
-        return ZONE_TYPE_TO_TEXTURE_ID[self.zone_type]
-
-
 ### BASE OBJECTS
 BASE_WALL_GUN = ObjectContainer(
     object_type="AlienTower",
     team=Team.ENEMY,
-    required_radius=3,
+    required_radius=1,
     attachment_type="WallLaser",
 )
 BASE_LIGHTNING_GUN = ObjectContainer(
     object_type="AlienTower",
     team=Team.ENEMY,
-    required_radius=3,
+    required_radius=1,
     attachment_type="LightningGun",
 )
 BASE_BLAST_TOWER = ObjectContainer(
     object_type="BlastTower",
     team=Team.ENEMY,
-    required_radius=3,
+    required_radius=1,
+    y_offset=5,
 )
 BASE_OIL_PUMP = ObjectContainer(
     object_type="ALIENPUMP",
     team=Team.ENEMY,
-    required_radius=4,
+    required_radius=2,
 )
 BASE_ALIEN_POWER_STORE = ObjectContainer(
     object_type="alienpowerstore",
     team=Team.ENEMY,
-    required_radius=4,
+    required_radius=2,
+    y_offset=4,
 )
 BASE_PRIORITY1 = {
     BASE_OIL_PUMP: 1,
@@ -82,17 +51,17 @@ BASE_PRIORITY1 = {
 BASE_GROUND_PROD = ObjectContainer(
     object_type="ALIENGROUNDPROD",
     team=Team.ENEMY,
-    required_radius=10,
+    required_radius=5,
 )
 BASE_AIR_PROD = ObjectContainer(
     object_type="AlienProdTower",
     team=Team.ENEMY,
-    required_radius=8,
+    required_radius=3,
 )
 BASE_COM = ObjectContainer(
     object_type="ALIENCOMCENTER",
     team=Team.ENEMY,
-    required_radius=12,
+    required_radius=5,
 )
 BASE_PRIORITY2 = {BASE_GROUND_PROD: 1, BASE_AIR_PROD: 1, BASE_COM: 1}
 ALL_BASE = {
