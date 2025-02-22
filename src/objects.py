@@ -8,6 +8,7 @@ Contains all info regarding objects for the level
 
 import logging
 import math
+from pickletools import TAKEN_FROM_ARGUMENT1
 import random
 from dataclasses import dataclass
 from enum import IntEnum, auto
@@ -24,13 +25,25 @@ from src.models import (
     ZoneSize,
     ZoneMarker,
     ObjectContainer,
-    ZoneSpecial,
+    ZoneSubType,
     ZONE_SIZE_TO_NUM_OBJECTS,
 )
 from src.terrain import TerrainHandler
 
 # Import object containers after all other imports to prevent circular dependencies
-from object_containers import ALL_SCRAP, ALL_BASE, BASE_PRIORITY1, BASE_PRIORITY2
+from object_containers import (
+    PUMP_OUTPOST_PRIORITY,
+    PUMP_OUTPOST_ALL,
+    BASE_PRIORITY1,
+    BASE_PRIORITY2,
+    BASE_ALL_OTHER,
+    DESTROYED_BASE_PRIORITY,
+    SCRAP_DESTROYED_BASE,
+    SCRAP_BATTLE,
+    SCRAP_FUEL_TANKS,
+    WEAPON_CRATE_SCRAP_PRIORITY,
+    WEAPON_CRATE_SCRAP_OTHERS,
+)
 
 
 class LocationEnum(IntEnum):
@@ -396,9 +409,7 @@ class ObjectHandler:
         """
         # find a coast location
         logging.info("ADD Carrier: Starting")
-        # SPECIAL FOR CARRIER FOR SOME REASON - flip x and z else gets placed
-        # ... in wrong location
-        z, x = self._find_location(
+        x, z = self._find_location(
             where=LocationEnum.COAST, required_radius=required_radius
         )
 
@@ -587,7 +598,7 @@ class ObjectHandler:
         self,
         zone_type: ZoneType,
         zone_size: ZoneSize,
-        zone_special: ZoneSpecial,
+        zone_subtype: ZoneSubType,
         extra_masks: Optional[np.ndarray] = None,
     ) -> None:
         """Adds a zone marker to the map based on the size via a lookup.
@@ -595,7 +606,7 @@ class ObjectHandler:
         Args:
             zone_type (ZoneType): Type of zone to create
             zone_size (ZoneSize): Size of the zone to create
-            zone_special (ZoneSpecial): Special type for the zone
+            zone_subtype (ZoneSubType): Special type for the zone
             extra_masks (Optional[np.ndarray], optional): Additional mask to consider for placement. Defaults to None.
         """
         # create zone marker object and store it
@@ -604,7 +615,7 @@ class ObjectHandler:
             z=0,
             zone_type=zone_type,
             zone_size=zone_size,
-            zone_special=zone_special,
+            zone_subtype=zone_subtype,
         )
         # find a land location we can place the radius zone at (with some buffer)
         # ... with special args to consider only other zones
@@ -624,7 +635,7 @@ class ObjectHandler:
             self.zones.append(new_zone)
             return
         logging.info(
-            f"Could not find location for zone {zone_type} {zone_size} {zone_special}"
+            f"Could not find location for zone {zone_type} {zone_size} {zone_subtype}"
         )
 
     def populate_zone(self, zone: ZoneMarker) -> None:
@@ -637,54 +648,75 @@ class ObjectHandler:
         logging.info("Populating zone: " + str(zone))
         # look up how many objects to add to the zone, based on its size
         num_objects = ZONE_SIZE_TO_NUM_OBJECTS[zone.zone_size]
-        if zone.zone_type == ZoneType.SCRAP:
-            for _ in range(num_objects):
-                return  # TODO REVERT
-                # SCRAP ZONES SEEM TO CAUSE INSTABILITY?
-                # pick a random object from the dict
-                object_to_add = self.noise_generator.select_random_from_weighted_dict(
-                    ALL_SCRAP
-                )
-                # add the object to the zone
-                self.add_object_on_land_random(
-                    object_to_add.object_type,
-                    attachment_type=object_to_add.attachment_type,
-                    team=object_to_add.team,
-                    required_radius=object_to_add.required_radius,
-                    y_rotation=self.noise_generator.randint(0, 360),
-                    in_zone=zone,
-                )
-            return
-        elif zone.zone_type == ZoneType.BASE:
-            # select a number from each priority list
-            priority1_num = num_objects // 4
-            priority_1_objs = [
-                self.noise_generator.select_random_from_weighted_dict(BASE_PRIORITY1)
-                for _ in range(priority1_num)
-            ]
-            priority2_num = num_objects // 3
-            priority_2_objs = [
-                self.noise_generator.select_random_from_weighted_dict(BASE_PRIORITY2)
-                for _ in range(priority2_num)
-            ]
-            all_base_objs = [
-                self.noise_generator.select_random_from_weighted_dict(ALL_BASE)
-                for _ in range(num_objects - priority1_num - priority2_num)
-            ]
-            # put them in the zone, after sorting descending by radius
-            priority_1_objs.sort(key=lambda x: x.required_radius, reverse=True)
-            priority_2_objs.sort(key=lambda x: x.required_radius, reverse=True)
-            all_base_objs.sort(key=lambda x: x.required_radius, reverse=True)
+        # iterate through zones
+        p1_object_dict = {}  # select these first
+        p1_num = 0  # how many to select
+        p2_object_dict = {}  # then select these
+        p2_num = 0  # how many to select
+        all_other_object_dict = {}  # then fill with the objs here
+        z_t = zone.zone_type
+        z_s = zone.zone_subtype
 
-            for obj in priority_1_objs + priority_2_objs + all_base_objs:
-                self.add_object_on_land_random(
-                    obj.object_type,
-                    attachment_type=obj.attachment_type,
-                    team=obj.team,
-                    required_radius=obj.required_radius,
-                    y_rotation=self.noise_generator.randint(0, 360),
-                    y_offset=obj.y_offset,
-                    in_zone=zone,
-                )
-            return
+        if z_t == ZoneType.SCRAP and z_s == ZoneSubType.DESTROYED_BASE:
+            # no priority dict - burnt out building
+            p1_object_dict = DESTROYED_BASE_PRIORITY
+            p1_num = 1
+            all_other_object_dict = SCRAP_DESTROYED_BASE
+        if z_t == ZoneType.SCRAP and z_s == ZoneSubType.OLD_TANK_BATTLE:
+            # default - just general scrap
+            all_other_object_dict = SCRAP_BATTLE
+        elif z_t == ZoneType.SCRAP and z_s == ZoneSubType.FUEL_TANKS:
+            # default - just general scrap
+            all_other_object_dict = SCRAP_FUEL_TANKS
+        elif z_t == ZoneType.SCRAP and z_s == ZoneSubType.WEAPON_CRATE:
+            p1_object_dict = WEAPON_CRATE_SCRAP_PRIORITY
+            p1_num = 3
+            all_other_object_dict = WEAPON_CRATE_SCRAP_OTHERS
+        elif z_t == ZoneType.BASE and z_s == ZoneSubType.PUMP_OUTPOST:
+            # get at least 4 oil pumps
+            p1_object_dict = PUMP_OUTPOST_PRIORITY
+            p1_num = 4
+            # then fill from the generic list for others
+            all_other_object_dict = PUMP_OUTPOST_ALL
+        elif z_t == ZoneType.BASE and z_s == ZoneSubType.GENERIC_BASE:
+            # at least one production / command building (SCALES WITH SIZE)
+            p1_object_dict = BASE_PRIORITY1
+            p1_num = 1 * zone.zone_size.value
+            # then at least two power stores
+            p2_object_dict = BASE_PRIORITY2
+            p2_num = 2
+            # then fill from the generic list for others
+            all_other_object_dict = BASE_ALL_OTHER
+        else:
+            logging.info(
+                f"No default case for zone type {zone.zone_type} and special {zone.zone_subtype}"
+            )
+
+        # NOW implement
+        priority_1_objs = [
+            self.noise_generator.select_random_from_weighted_dict(p1_object_dict)
+            for _ in range(p1_num)
+        ]
+        priority_2_objs = [
+            self.noise_generator.select_random_from_weighted_dict(p2_object_dict)
+            for _ in range(p2_num)
+        ]
+        all_base_objs = [
+            self.noise_generator.select_random_from_weighted_dict(all_other_object_dict)
+            for _ in range(num_objects - p1_num - p2_num)
+        ]
+        # put them in the zone, after sorting descending by radius
+        priority_1_objs.sort(key=lambda x: x.required_radius, reverse=True)
+        priority_2_objs.sort(key=lambda x: x.required_radius, reverse=True)
+        all_base_objs.sort(key=lambda x: x.required_radius, reverse=True)
+        for obj in priority_1_objs + priority_2_objs + all_base_objs:
+            self.add_object_on_land_random(
+                obj.object_type,
+                attachment_type=obj.attachment_type,
+                team=obj.team,
+                required_radius=obj.required_radius,
+                y_rotation=self.noise_generator.randint(0, 360),
+                y_offset=obj.y_offset,
+                in_zone=zone,
+            )
         logging.info("Populating zone: " + str(zone) + " completed")

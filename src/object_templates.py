@@ -7,8 +7,8 @@ This module contains templates for object placement (e.g. for placing groups of
 alien AA guns, or groups of scrap/salvage)
 """
 
-from src.models import Team, ObjectContainer
-
+from src.enums import Team
+from src.object_containers import ObjectContainer
 
 # NOTE since this is a dict based structure, no optional keys
 TEMPLATE_ALIEN_AA = [

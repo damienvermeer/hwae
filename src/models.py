@@ -1,13 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum, auto
-
-
-class Team(IntEnum):
-    """Team enumeration for objects"""
-
-    PLAYER = 0
-    ENEMY = 1
-    NEUTRAL = 4294967295  # 0xFFFFFFFF
+from enums import Team
 
 
 class ZoneType(IntEnum):
@@ -17,21 +10,31 @@ class ZoneType(IntEnum):
     SCRAP = auto()
 
 
+class ZoneSubType(IntEnum):
+    # SCRAP
+    DESTROYED_BASE = auto()
+    OLD_TANK_BATTLE = auto()
+    FUEL_TANKS = auto()
+    WEAPON_CRATE = auto()  # weapon crate special
+    # ENEMY BASE like
+    PUMP_OUTPOST = auto()
+    GENERIC_BASE = auto()
+
+
 class ZoneSize(IntEnum):
     """Size of zone"""
 
-    SMALL = auto()
-    MEDIUM = auto()
-    LARGE = auto()
-    XLARGE = auto()
+    # BELOW also used to scale some building inside zone
 
-
-class ZoneSpecial(IntEnum):
-    NONE = auto()
-    WEAPON_CRATE = auto()
+    TINY = 1
+    SMALL = 2
+    MEDIUM = 3
+    LARGE = 4
+    XLARGE = 6
 
 
 ZONE_SIZE_TO_RADIUS = {
+    ZoneSize.TINY: 5,
     ZoneSize.SMALL: 8,
     ZoneSize.MEDIUM: 11,
     ZoneSize.LARGE: 16,
@@ -40,14 +43,15 @@ ZONE_SIZE_TO_RADIUS = {
 
 ZONE_TYPE_TO_TEXTURE_ID = {
     ZoneType.BASE: 8,
-    ZoneType.SCRAP: 10,
+    ZoneType.SCRAP: 11,
 }
 
 ZONE_SIZE_TO_NUM_OBJECTS = {
-    ZoneSize.SMALL: 7,
-    ZoneSize.MEDIUM: 11,
-    ZoneSize.LARGE: 14,
-    ZoneSize.XLARGE: 19,
+    ZoneSize.TINY: 15,
+    ZoneSize.SMALL: 15,
+    ZoneSize.MEDIUM: 15,
+    ZoneSize.LARGE: 15,
+    ZoneSize.XLARGE: 15,
 }
 
 
@@ -59,7 +63,7 @@ class ZoneMarker:
     z: float
     zone_type: ZoneType
     zone_size: ZoneSize
-    zone_special: ZoneSpecial
+    zone_subtype: ZoneSubType
 
     @property
     def radius(self) -> float:

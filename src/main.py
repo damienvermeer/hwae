@@ -13,16 +13,16 @@ from fileio.cfg import CfgFile
 from fileio.lev import LevFile
 from fileio.ob3 import Ob3File
 from fileio.ars import ArsFile
-from src.object_containers import ALL_BASE
 import src.object_templates as ot
 
 from construction import ConstructionManager
 from noisegen import NoiseGenerator
-from objects import ObjectHandler, Team
+from objects import ObjectHandler
+from enums import Team
 from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
-from zones import ZoneManager, ZoneType, ZoneSize, ZoneSpecial
+from zones import ZoneManager, ZoneType, ZoneSize, ZoneSubType
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,7 +31,7 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=2)
+    noise_generator = NoiseGenerator(seed=3)
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -52,7 +52,7 @@ def main():
     )
     # TODO .ait text file
 
-    # STEP 6 - RANDOMLY UNLOCK VEHICLES/ADDONS/EJ
+    # STEP xxx - RANDOMLY UNLOCK VEHICLES/ADDONS/EJ
     construction_manager = ConstructionManager(ars_data, noise_generator)
     construction_manager.select_random_construction_availability()
     # select a random EJ between 3000 to 8000 in blocks of 250
@@ -84,28 +84,24 @@ def main():
     carrier_mask = object_handler.add_carrier_and_return_mask()
 
     # STEP xxx - SELECT ZONES, COLOUR & FLATTEN TERRAIN
-    num_zones = noise_generator.randint(4, 11)
     zone_manager = ZoneManager(object_handler, noise_generator)
     # add a small scrap zone near the carrier - so the player has some EJ
-    object_handler.add_zone(
-        ZoneType.BASE,
-        ZoneSize.SMALL,
-        ZoneSpecial.NONE,
+    zone_manager.add_tiny_scrap_near_carrier(carrier_mask)
+    zone_manager.add_medium_base_somewhere()
+    # create extra zones and populate them all
+    zone_manager.generate_random_zones(
+        noise_generator.randint(1, 3), zone_type=ZoneType.SCRAP
     )
-    object_handler.add_zone(
-        ZoneType.SCRAP,
-        ZoneSize.SMALL,
-        ZoneSpecial.NONE,
-        extra_masks=carrier_mask,
+    zone_manager.generate_random_zones(
+        noise_generator.randint(3, 7), zone_type=ZoneType.BASE
     )
-    zone_manager.generate_random_zones(num_zones)
     for zone in object_handler.zones:
         terrain_handler.apply_texture_based_on_zone(zone)
         terrain_handler.flatten_terrain_based_on_zone(zone)
         object_handler.populate_zone(zone)
 
     # STEP XXX - POPULATE THE MAP WITH OTHER OBJECTS
-    # object_handler.add_scenery(map_size=map_size_template)
+    object_handler.add_scenery(map_size=map_size_template)
     # for _ in range(50):
     #     obj = noise_generator.select_random_from_weighted_dict(ALL_BASE)
     #     object_handler.add_object_on_land_random(
@@ -125,9 +121,6 @@ def main():
     generate_minimap(
         terrain_handler, cfg_data, OUTPUT_PATH / NEW_LEVEL_NAME / "map.pcx"
     )
-    # STEP 6 - RANDOMLY UNLOCK VEHICLES/ADDONS
-    construction_manager = ConstructionManager(ars_data, noise_generator)
-    construction_manager.select_random_construction_availability()
 
     # STEP 7 - FINALISE SCRIPT/TRIGGERS
     if True:  # TODO if a crate zone is present
@@ -145,9 +138,20 @@ def main():
                 ],
             )
 
+    object_handler.add_object_on_land_random(
+        "recharge_crate",
+        team=Team.NEUTRAL,
+        required_radius=1,
+        y_offset=3,
+    )
+
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data]:
         file.save(OUTPUT_PATH / NEW_LEVEL_NAME, NEW_LEVEL_NAME)
+
+    # STEP xxx - delete any .aim file in the new level directory (force rebuild)
+    for aim_file in (OUTPUT_PATH / NEW_LEVEL_NAME).glob("*.aim"):
+        os.remove(aim_file)
 
 
 if __name__ == "__main__":
