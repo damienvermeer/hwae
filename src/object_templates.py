@@ -32,3 +32,49 @@ TEMPLATE_ALIEN_AA = tuple(
         ),
     ]
 )
+
+TEMPLATE_6_BY_2_SILO = tuple(
+    [
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            y_offset=5.5,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=0,
+            template_z_offset=1,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=1,
+            template_z_offset=0,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=1,
+            template_z_offset=1,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=2,
+            template_z_offset=0,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=2,
+            template_z_offset=1,
+        ),
+    ]
+)

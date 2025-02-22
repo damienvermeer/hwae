@@ -4,7 +4,7 @@ from src.models import (
 )
 from enum import IntEnum, auto
 from dataclasses import dataclass
-from object_templates import TEMPLATE_ALIEN_AA
+from object_templates import TEMPLATE_ALIEN_AA, TEMPLATE_6_BY_2_SILO
 
 
 class Team(IntEnum):
@@ -203,6 +203,7 @@ WEAPON_CRATE_SCRAP_OTHERS = {
 }
 # SPECIAL - scrap fuel tanks -----------------------------------------
 SCRAP_FUEL_TANKS = {
+    TEMPLATE_6_BY_2_SILO: 1,
     SCRAP_L2FUELTANK: 1,
     SCRAP_L2FUELSILO: 1,
 }
