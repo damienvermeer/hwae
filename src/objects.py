@@ -456,6 +456,7 @@ class ObjectHandler:
         self,
         object_template: list[ObjectContainer],
         consider_zones: bool = False,
+        in_zone: ZoneMarker = None,
     ) -> None:
         """A special version of add on land - it identifies a location, but then adds
         multiple objects based on the relative positioning to the first
@@ -463,13 +464,16 @@ class ObjectHandler:
         Args:
             object_template (list[ObjectContainer]): list of [reference, additional1, additional2, ...]
             consider_zones (bool, optional): If True, the function will consider zones when placing objects. Defaults to False.
+            in_zone (ZoneMarker, optional): The zone to place the objects in. Defaults to None.
         """
         logging.info(f"Starting template add ({len(object_template)} objects)")
         # get info from the reference object
         ref_object = object_template[0]
         # get a lotation like normal below defaults to add on land
         returnval = self._find_location(
-            required_radius=ref_object.required_radius, consider_zones=consider_zones
+            required_radius=ref_object.required_radius,
+            consider_zones=consider_zones,
+            in_zone=in_zone,
         )
         if returnval is None:
             return
@@ -705,18 +709,31 @@ class ObjectHandler:
             self.noise_generator.select_random_from_weighted_dict(all_other_object_dict)
             for _ in range(num_objects - p1_num - p2_num)
         ]
+
         # put them in the zone, after sorting descending by radius
-        priority_1_objs.sort(key=lambda x: x.required_radius, reverse=True)
-        priority_2_objs.sort(key=lambda x: x.required_radius, reverse=True)
-        all_base_objs.sort(key=lambda x: x.required_radius, reverse=True)
+        def _get_required_radius(
+            obj: ObjectContainer | tuple[ObjectContainer, ...]
+        ) -> int:
+            if isinstance(obj, tuple):
+                return obj[0].required_radius
+            else:
+                return obj.required_radius
+
+        priority_1_objs.sort(key=lambda x: _get_required_radius(x), reverse=True)
+        priority_2_objs.sort(key=lambda x: _get_required_radius(x), reverse=True)
+        all_base_objs.sort(key=lambda x: _get_required_radius(x), reverse=True)
         for obj in priority_1_objs + priority_2_objs + all_base_objs:
-            self.add_object_on_land_random(
-                obj.object_type,
-                attachment_type=obj.attachment_type,
-                team=obj.team,
-                required_radius=obj.required_radius,
-                y_rotation=self.noise_generator.randint(0, 360),
-                y_offset=obj.y_offset,
-                in_zone=zone,
-            )
+            # check if obj is a list (template) or a single object
+            if isinstance(obj, tuple):
+                self.add_object_template_on_land_random(obj, in_zone=zone)
+            else:
+                self.add_object_on_land_random(
+                    obj.object_type,
+                    attachment_type=obj.attachment_type,
+                    team=obj.team,
+                    required_radius=obj.required_radius,
+                    y_rotation=self.noise_generator.randint(0, 360),
+                    y_offset=obj.y_offset,
+                    in_zone=zone,
+                )
         logging.info("Populating zone: " + str(zone) + " completed")

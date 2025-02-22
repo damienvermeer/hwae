@@ -4,6 +4,7 @@ from src.models import (
 )
 from enum import IntEnum, auto
 from dataclasses import dataclass
+from object_templates import TEMPLATE_ALIEN_AA
 
 
 class Team(IntEnum):
@@ -45,6 +46,7 @@ PUMP_OUTPOST_ALL = {
     BASE_WALL_GUN: 2,
     BASE_LIGHTNING_GUN: 1,
     BASE_BLAST_TOWER: 1,
+    TEMPLATE_ALIEN_AA: 1,
 }
 # SPECIAL TYPE - BASE -----------------------------------------
 BASE_ALIEN_POWER_STORE = ObjectContainer(
@@ -86,6 +88,7 @@ BASE_ALL_OTHER = {
     BASE_WALL_GUN: 8,
     BASE_LIGHTNING_GUN: 8,
     BASE_BLAST_TOWER: 8,
+    TEMPLATE_ALIEN_AA: 4,
     BASE_ALIEN_POWER_STORE: 3,
     BASE_GROUND_PROD: 1,
     BASE_AIR_PROD: 1,
@@ -116,7 +119,7 @@ SCRAP_L2FUELTANK = ObjectContainer(
     object_type="l2fueltank",
     team=Team.NEUTRAL,
     required_radius=1,
-    y_offset=1.75,
+    y_offset=1.752,
 )
 SCRAP_L2FUELSILO = ObjectContainer(
     object_type="l2silo",
