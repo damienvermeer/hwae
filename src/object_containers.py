@@ -4,7 +4,11 @@ from src.models import (
 )
 from enum import IntEnum, auto
 from dataclasses import dataclass
-from object_templates import TEMPLATE_ALIEN_AA, TEMPLATE_6_BY_2_SILO
+from object_templates import (
+    TEMPLATE_ALIEN_AA,
+    TEMPLATE_ALIEN_RADAR,
+    TEMPLATE_6_BY_2_SILO,
+)
 
 
 class Team(IntEnum):
@@ -43,10 +47,11 @@ BASE_OIL_PUMP = ObjectContainer(
 )
 PUMP_OUTPOST_PRIORITY = {BASE_OIL_PUMP: 1}
 PUMP_OUTPOST_ALL = {
-    BASE_WALL_GUN: 2,
-    BASE_LIGHTNING_GUN: 1,
-    BASE_BLAST_TOWER: 1,
-    TEMPLATE_ALIEN_AA: 1,
+    BASE_WALL_GUN: 4,
+    BASE_LIGHTNING_GUN: 2,
+    BASE_BLAST_TOWER: 3,
+    TEMPLATE_ALIEN_AA: 2,
+    TEMPLATE_ALIEN_RADAR: 1,
 }
 # SPECIAL TYPE - BASE -----------------------------------------
 BASE_ALIEN_POWER_STORE = ObjectContainer(
@@ -92,6 +97,9 @@ BASE_ALL_OTHER = {
     BASE_ALIEN_POWER_STORE: 3,
     BASE_GROUND_PROD: 1,
     BASE_AIR_PROD: 1,
+    BASE_LARGE_PROD: 1,
+    BASE_COM: 1,
+    TEMPLATE_ALIEN_RADAR: 1,
 }
 
 

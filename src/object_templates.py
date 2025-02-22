@@ -32,7 +32,27 @@ TEMPLATE_ALIEN_AA = tuple(
         ),
     ]
 )
-
+TEMPLATE_ALIEN_RADAR = tuple(
+    [
+        # first entry is the main object
+        ObjectContainer(
+            object_type="Alienspybase",
+            team=Team.ENEMY,
+            required_radius=2,
+        ),
+        # and subsequent entries are associated objects, so they
+        # ... have x,y,z offsets relative to the first
+        ObjectContainer(
+            object_type="Alienspytower",
+            team=Team.ENEMY,
+            required_radius=2,
+            # below values came from ob3 review of an existing map/ob3 file
+            template_x_offset=-0.15502599226306346,
+            template_y_offset=21.23187597678917,
+            template_z_offset=-0.0021609052224445015,
+        ),
+    ]
+)
 TEMPLATE_6_BY_2_SILO = tuple(
     [
         ObjectContainer(
