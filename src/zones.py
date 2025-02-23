@@ -9,6 +9,7 @@ Contains all info regarding objects for the level
 from dataclasses import dataclass
 from enum import IntEnum, auto
 import numpy as np
+import logging
 
 from src.fileio.ob3 import Ob3File, MAP_SCALER
 from src.noisegen import NoiseGenerator
@@ -126,12 +127,15 @@ class ZoneManager:
         for zone_to_add in _zones_to_place:
             self.object_handler.add_zone(*zone_to_add)
 
-    def add_tiny_scrap_near_carrier(self, carrier_mask: np.ndarray) -> None:
-        """Adds a tiny scrap zone near the carrier
+    def add_tiny_scrap_near_carrier_and_calc_rally(
+        self, carrier_mask: np.ndarray
+    ) -> None:
+        """Adds a tiny scrap zone near the carrier, then uses this location to calculate a rally point for the carrier.
 
         Args:
             carrier_mask (np.ndarray): Mask of the carrier
         """
+        logging.info("Adding tiny scrap zone near carrier")
         # pick a zone subtype at random from ALLOWED_ZONE_SUBTYPES[ZoneType.SCRAP]
         zone_subtype = self.noise_generator.select_random_from_weighted_dict(
             ZONE_SUBTYPE_WEIGHTS[ZoneType.SCRAP]
@@ -142,9 +146,24 @@ class ZoneManager:
             zone_subtype,
             extra_masks=carrier_mask,
         )
+        # create a custom mask within a radius of 6 of the new scrap zone
+        nearby_scrap_mask = self.object_handler._update_mask_grid_with_radius(
+            np.zeros_like(carrier_mask),
+            radius=8,
+            x=self.object_handler.zones[0].x,
+            z=self.object_handler.zones[0].z,
+            set_to=1,
+        )
+        # find a location
+        x, z = self.object_handler._find_location(
+            required_radius=1,
+            consider_zones=True,
+            extra_masks=nearby_scrap_mask,
+        )
+        return x, z
 
     def add_medium_base_somewhere(self) -> None:
-        """Adds a medium base zone somewhere"""
+        """Adds a medium base zone somewhere in line with all standard masks"""
         self.object_handler.add_zone(
             ZoneType.BASE,
             ZoneSize.MEDIUM,

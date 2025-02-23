@@ -31,7 +31,7 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=3)
+    noise_generator = NoiseGenerator(seed=0)
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -86,12 +86,21 @@ def main():
     # STEP xxx - SELECT ZONES, COLOUR & FLATTEN TERRAIN
     zone_manager = ZoneManager(object_handler, noise_generator)
     # add a small scrap zone near the carrier - so the player has some EJ
-    zone_manager.add_tiny_scrap_near_carrier(carrier_mask)
+    xr, zr = zone_manager.add_tiny_scrap_near_carrier_and_calc_rally(carrier_mask)
+    yr = terrain_handler.get_height(xr, zr)
+    cfg_data["RallyPoint"] = f"{zr*10*51.7:.6f},{yr:.6f},{xr*10*51.7:.6f}"
+    # ensure at least one enemy base - else we win straight away
     zone_manager.add_medium_base_somewhere()
     # create extra zones and populate them all
     zone_manager.generate_random_zones(
         noise_generator.randint(1, 3), zone_type=ZoneType.SCRAP
     )
+    # TEMP set rally point - TODO function & TODO find location
+    # ... within radius of a x,z point
+    x = object_handler.zones[0].x
+    z = object_handler.zones[0].z
+    y = terrain_handler.get_height(x, z)
+
     zone_manager.generate_random_zones(
         noise_generator.randint(3, 7), zone_type=ZoneType.BASE
     )
