@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import IntEnum, auto
 from enums import Team
+from typing import Union
 
 
 class ZoneType(IntEnum):
@@ -64,6 +65,7 @@ class ZoneMarker:
     zone_type: ZoneType
     zone_size: ZoneSize
     zone_subtype: ZoneSubType
+    zone_index: Union[int, None] = None  # used for enemy team grouping
 
     @property
     def radius(self) -> float:
