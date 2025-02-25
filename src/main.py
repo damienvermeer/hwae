@@ -31,7 +31,6 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=0)
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -49,6 +48,11 @@ def main():
     shutil.copy(
         template_root / "common.s0u",
         OUTPUT_PATH / NEW_LEVEL_NAME / f"{NEW_LEVEL_NAME}.s0u",
+    )
+    # and .for (force/teams file)
+    shutil.copy(
+        template_root / "common.for",
+        OUTPUT_PATH / NEW_LEVEL_NAME / f"{NEW_LEVEL_NAME}.for",
     )
     # TODO .ait text file
 
@@ -90,7 +94,7 @@ def main():
     yr = terrain_handler.get_height(xr, zr)
     cfg_data["RallyPoint"] = f"{zr*10*51.7:.6f},{yr:.6f},{xr*10*51.7:.6f}"
     # ensure at least one enemy base - else we win straight away
-    zone_manager.add_medium_base_somewhere()
+    zone_manager.generate_random_zones(1, ZoneType.BASE)
     # create extra zones and populate them all
     zone_manager.generate_random_zones(
         noise_generator.randint(1, 3), zone_type=ZoneType.SCRAP
@@ -102,7 +106,7 @@ def main():
     y = terrain_handler.get_height(x, z)
 
     zone_manager.generate_random_zones(
-        noise_generator.randint(3, 7), zone_type=ZoneType.BASE
+        noise_generator.randint(0, 3), zone_type=ZoneType.BASE
     )
     for zone in object_handler.zones:
         terrain_handler.apply_texture_based_on_zone(zone)
@@ -110,21 +114,9 @@ def main():
         object_handler.populate_zone(zone)
 
     # STEP XXX - POPULATE THE MAP WITH OTHER OBJECTS
-    object_handler.add_scenery(map_size=map_size_template)
-    # for _ in range(50):
-    #     obj = noise_generator.select_random_from_weighted_dict(ALL_BASE)
-    #     object_handler.add_object_on_land_random(
-    #         object_type=obj.object_type,
-    #         team=Team.ENEMY,
-    #         required_radius=obj.required_radius,
-    #         attachment_type=obj.attachment_type,
-    #         consider_zones=True,
-    #     )
-    # object_handler.add_object_on_land_random(
-    #     "recharge_crate",
-    #     team=Team.NEUTRAL,
-    #     required_radius=1,
-    # )
+    # add a few random alien aa guns, radars etc
+    object_handler.add_alien_misc(carrier_xz=[xr, zr], map_size=map_size_template)
+    # object_handler.add_scenery(map_size=map_size_template)
 
     # STEP 5 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
     generate_minimap(
@@ -146,13 +138,6 @@ def main():
                     f"AIS_UNITTYPE_SPECIFIC : {spare_weapon}",
                 ],
             )
-
-    object_handler.add_object_on_land_random(
-        "recharge_crate",
-        team=Team.NEUTRAL,
-        required_radius=1,
-        y_offset=3,
-    )
 
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data]:

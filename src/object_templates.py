@@ -53,6 +53,103 @@ TEMPLATE_ALIEN_RADAR = tuple(
         ),
     ]
 )
+TEMPLATE_ALIEN_ENERGY_POWER_STORE_TRIANGLE = tuple(
+    [
+        ObjectContainer(
+            object_type="alienpowerstore",
+            team=Team.ENEMY,
+            required_radius=3,
+            y_offset=3,
+        ),
+        ObjectContainer(
+            object_type="alienpowerstore",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=2,
+            template_z_offset=0,
+        ),
+        ObjectContainer(
+            object_type="alienpowerstore",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=1,
+            template_z_offset=1.732,
+        ),
+    ]
+)
+TEMPLATE_ALIEN_GROUND_PROD_WITH_UNITS = tuple(
+    [
+        ObjectContainer(
+            object_type="ALIENGROUNDPROD",
+            team=Team.ENEMY,
+            required_radius=5,
+        ),
+        ObjectContainer(
+            object_type="LightWalker",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=1.5,
+            template_z_offset=-1.299,
+        ),
+        ObjectContainer(
+            object_type="HeavyWalker",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=0,
+            template_z_offset=1.5,
+        ),
+    ]
+)
+
+TEMPLATE_ALIEN_AIR_PROD_WITH_UNITS = tuple(
+    [
+        ObjectContainer(
+            object_type="AlienProdTower",
+            team=Team.ENEMY,
+            required_radius=3,
+        ),
+        ObjectContainer(
+            object_type="SmallFlyer",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=1.5,
+            template_z_offset=-1.299,
+        ),
+        ObjectContainer(
+            object_type="MediumFlyer",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=0,
+            template_z_offset=1.5,
+        ),
+    ]
+)
+
+TEMPLATE_ALIEN_LARGE_PROD_WITH_UNITS = tuple(
+    [
+        ObjectContainer(
+            object_type="ALIENLARGEPROD",
+            team=Team.ENEMY,
+            required_radius=3,
+        ),
+        # below offsets are forming a triangle around the main object
+        ObjectContainer(
+            object_type="HoverLaser",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=1.5,
+            template_z_offset=-1.299,
+        ),
+        ObjectContainer(
+            object_type="SiegeSlug",
+            team=Team.ENEMY,
+            required_radius=3,
+            template_x_offset=0,
+            template_z_offset=1.5,
+        ),
+    ]
+)
+
 TEMPLATE_6_BY_2_SILO = tuple(
     [
         ObjectContainer(
@@ -95,6 +192,59 @@ TEMPLATE_6_BY_2_SILO = tuple(
             required_radius=3,
             template_x_offset=2,
             template_z_offset=1,
+        ),
+    ]
+)
+
+TEMPLATE_4_BY_2_SILO = tuple(
+    [
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            y_offset=5.5,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=0,
+            template_z_offset=1,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=1,
+            template_z_offset=0,
+        ),
+        ObjectContainer(
+            object_type="l2silo",
+            team=Team.NEUTRAL,
+            required_radius=3,
+            template_x_offset=1,
+            template_z_offset=1,
+        ),
+    ]
+)
+TEMPLATE_SCRAP_3_OILTANKS = tuple(
+    [
+        ObjectContainer(
+            object_type="l2fueltank",
+            team=Team.NEUTRAL,
+            required_radius=1,
+        ),
+        ObjectContainer(
+            object_type="l2fueltank",
+            team=Team.NEUTRAL,
+            required_radius=1,
+            template_x_offset=0.5,
+        ),
+        ObjectContainer(
+            object_type="l2fueltank",
+            team=Team.NEUTRAL,
+            required_radius=1,
+            template_x_offset=1,
         ),
     ]
 )

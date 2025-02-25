@@ -60,7 +60,6 @@ ALLOWED_ZONE_SUBTYPES = {
 }
 ZONE_SUBTYPE_WEIGHTS = {
     ZoneType.BASE: {
-        ZoneSubType.PUMP_OUTPOST: 1,
         ZoneSubType.GENERIC_BASE: 1,
     },
     ZoneType.SCRAP: {
@@ -72,7 +71,6 @@ ZONE_SUBTYPE_WEIGHTS = {
 }
 ALLOWED_MAX_SUBTYPE_ZONES = {
     ZoneType.BASE: {
-        ZoneSubType.PUMP_OUTPOST: 3,
         ZoneSubType.GENERIC_BASE: 999,
     },
     ZoneType.SCRAP: {
@@ -82,6 +80,13 @@ ALLOWED_MAX_SUBTYPE_ZONES = {
         ZoneSubType.FUEL_TANKS: 999,
     },
 }
+PUMP_ZONES_PER_BASE_ZONE = {
+    ZoneSize.TINY: [ZoneSize.SMALL],
+    ZoneSize.SMALL: [ZoneSize.SMALL],
+    ZoneSize.MEDIUM: [ZoneSize.SMALL],
+    ZoneSize.LARGE: [ZoneSize.SMALL, ZoneSize.SMALL],
+    ZoneSize.XLARGE: [ZoneSize.SMALL, ZoneSize.SMALL],
+}
 
 
 @dataclass
@@ -90,6 +95,7 @@ class ZoneManager:
     noise_generator: NoiseGenerator
     # NOTE - zones themselves live in object manager
     special_zones_allocated = []
+    last_used_index = 1
 
     def generate_random_zones(self, n_zones: int, zone_type: ZoneType) -> None:
         """Generates n_zones based on a random selection based on weighting defined above
@@ -99,6 +105,11 @@ class ZoneManager:
         """
         _zones_to_place = []
         for _ in range(n_zones):
+            if zone_type == ZoneType.BASE:
+                self.last_used_index += 1
+                use_this_index = self.last_used_index
+            else:
+                use_this_index = None
             # construct a dict of the possible special
             # ... zones and their weights from ZONE_SPECIAL_WEIGHTS
             possible_special_zones_dict = {
@@ -118,14 +129,46 @@ class ZoneManager:
             )
             # add to allocated list
             self.special_zones_allocated.append(zone_subtype)
-            _zones_to_place.append((zone_type, zone_size, zone_subtype))
+            # index needs to start at 1, else we can put enemy base on player team
+            _zones_to_place.append((zone_type, zone_size, zone_subtype, use_this_index))
+            # if zone type is BASE - then also add a number of linked pump zones
+            # ... based on the size
+            if zone_type == ZoneType.BASE:
+                for pumpzone_size in PUMP_ZONES_PER_BASE_ZONE[zone_size]:
+                    _zones_to_place.append(
+                        (
+                            zone_type,
+                            pumpzone_size,
+                            ZoneSubType.PUMP_OUTPOST,
+                            use_this_index,
+                        )
+                    )
 
         # sort zones via largest to smallest radius
         _zones_to_place.sort(key=lambda x: ZONE_SIZE_TO_RADIUS[x[1]], reverse=True)
-
-        # finally add the zones
-        for zone_to_add in _zones_to_place:
+        # add the non pump outpost zones
+        for zone_to_add in [
+            x for x in _zones_to_place if x[2] != ZoneSubType.PUMP_OUTPOST
+        ]:
             self.object_handler.add_zone(*zone_to_add)
+
+        # now they've been added, add the linked pump zones
+        for zone_to_add in [
+            x for x in _zones_to_place if x[2] == ZoneSubType.PUMP_OUTPOST
+        ]:
+            # find the base zone with the same index
+            base_zone = [
+                x for x in self.object_handler.zones if x.zone_index == zone_to_add[3]
+            ][0]
+            # and add a pump zone within a radius of the base zone
+            self.object_handler.add_zone(
+                *zone_to_add,
+                extra_masks=self.object_handler.get_inclusion_mask_at_location(
+                    base_zone.x, base_zone.z, 40
+                )
+                * self.object_handler._get_all_zone_mask([base_zone]),
+                extra_zone_spacing=20  # try reduced spacing
+            )
 
     def add_tiny_scrap_near_carrier_and_calc_rally(
         self, carrier_mask: np.ndarray
@@ -161,11 +204,3 @@ class ZoneManager:
             extra_masks=nearby_scrap_mask,
         )
         return x, z
-
-    def add_medium_base_somewhere(self) -> None:
-        """Adds a medium base zone somewhere in line with all standard masks"""
-        self.object_handler.add_zone(
-            ZoneType.BASE,
-            ZoneSize.MEDIUM,
-            ZoneSubType.GENERIC_BASE,
-        )

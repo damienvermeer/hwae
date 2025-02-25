@@ -29,6 +29,51 @@ Action: AIScript_RunAIScript
   AIS_RESPOND_TO_THREATS
 }
 
+Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 2: BOOL_AND
+{
+Condition: AIScript_Always
+Action: AIScript_RunAIScript
+  AIS_REPLACE_VEHICLES
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_ATTACK
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_THREATS
+}
+
+Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 3: BOOL_AND
+{
+Condition: AIScript_Always
+Action: AIScript_RunAIScript
+  AIS_REPLACE_VEHICLES
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_ATTACK
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_THREATS
+}
+
+Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 4: BOOL_AND
+{
+Condition: AIScript_Always
+Action: AIScript_RunAIScript
+  AIS_REPLACE_VEHICLES
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_ATTACK
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_THREATS
+}
+
+Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 5: BOOL_AND
+{
+Condition: AIScript_Always
+Action: AIScript_RunAIScript
+  AIS_REPLACE_VEHICLES
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_ATTACK
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_THREATS
+}
+
+
 Trigger: "HWAE carrier death" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
 {
 Condition: AIScript_SpecificUnitDeath

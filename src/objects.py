@@ -44,6 +44,10 @@ from object_containers import (
     WEAPON_CRATE_SCRAP_PRIORITY,
     WEAPON_CRATE_SCRAP_OTHERS,
 )
+from object_templates import (
+    TEMPLATE_ALIEN_AA,
+    TEMPLATE_ALIEN_RADAR,
+)
 
 
 class LocationEnum(IntEnum):
@@ -152,7 +156,7 @@ class ObjectHandler:
         """
         return self._cached_object_mask
 
-    def _get_zone_seperation_mask(self) -> np.ndarray:
+    def _get_zone_seperation_mask(self, extra_zone_spacing: int = 40) -> np.ndarray:
         """Returns a mask where 0 is free space and 1 is occupied space, used for
         zone separation (e.g. making sure there is reasonable space between zones)
 
@@ -167,16 +171,18 @@ class ObjectHandler:
             )
         )
         # then check each zone (remove the zone from each)
-        FIXED_ZONE_SEPERATION = 40
         for zone in self.zones:
             zone_seperation_mask = self._update_mask_grid_with_radius(
-                zone_seperation_mask, zone.x, zone.z, FIXED_ZONE_SEPERATION, set_to=0
+                zone_seperation_mask, zone.x, zone.z, extra_zone_spacing, set_to=0
             )
         return zone_seperation_mask
 
-    def _get_all_zone_mask(self) -> np.ndarray:
+    def _get_all_zone_mask(self, exclude_zones: list[ZoneMarker] = []) -> np.ndarray:
         """Returns the cached zone mask. The mask is not maintained by a cache and
         is calculated each time from scratch
+
+        Args:
+            exclude_zones (list[ZoneMarker], optional): Zones to exclude. Defaults to [].
 
         Returns:
             np.ndarray: Zone mask where 0 is occupied and 1 is free
@@ -190,6 +196,8 @@ class ObjectHandler:
         )
         # then check each zone (remove the zone from each)
         for zone in self.zones:
+            if zone in exclude_zones:
+                continue
             zone_mask = self._update_mask_grid_with_radius(
                 zone_mask,
                 zone.x,
@@ -209,20 +217,53 @@ class ObjectHandler:
         Returns:
             np.ndarray: Zone mask where 0 is occupied and 1 is free
         """
-        zone_mask = np.zeros(
+        return self.get_inclusion_mask_at_location(zone.x, zone.z, zone.radius)
+
+    def get_inclusion_mask_at_location(self, x: int, z: int, radius: int) -> np.ndarray:
+        """Returns a mask where 0 is free space and 1 is occupied space, at a
+        given location
+
+        Args:
+            x (int): x location
+            z (int): z location
+            radius (int): Radius of the location
+
+        Returns:
+            np.ndarray: Inclusion mask
+        """
+        inclusion_mask = np.zeros(
             (
                 self.terrain_handler.width,
                 self.terrain_handler.length,
             )
         )
-        zone_mask = self._update_mask_grid_with_radius(
-            zone_mask,
-            zone.x,
-            zone.z,
-            zone.radius,
-            set_to=1,
+        inclusion_mask = self._update_mask_grid_with_radius(
+            inclusion_mask, x, z, radius, set_to=1
         )
-        return zone_mask
+        return inclusion_mask
+
+    def get_exclusion_mask_at_location(self, x: int, z: int, radius: int) -> np.ndarray:
+        """Returns a mask where 0 is free space and 1 is occupied space, at a
+        given location
+
+        Args:
+            x (int): x location
+            z (int): z location
+            radius (int): Radius of the location
+
+        Returns:
+            np.ndarray: Exclusion mask
+        """
+        exclusion_mask = np.zeros(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+        exclusion_mask = self._update_mask_grid_with_radius(
+            exclusion_mask, x, z, radius, set_to=0
+        )
+        return exclusion_mask
 
     def _get_land_mask(self, cutoff_height=-20) -> np.ndarray:
         """Generates a boolean map grid, where 1 is land and 0 is water via terrain
@@ -247,7 +288,16 @@ class ObjectHandler:
             for z in range(self.terrain_handler.length):
                 if self.terrain_handler.get_height(x, z) > cutoff_height:
                     mask[x, z] = 1
-
+        # setback everything radius 2 from the edge - to avoid things appearing
+        # ... awkwardly on the edge of a cliff etc
+        binary_terrain = self.terrain_handler._get_height_2d_array().copy()
+        binary_terrain[binary_terrain < 0] = 0
+        binary_terrain[binary_terrain > 0] = 1
+        edge_mask = self._get_binary_transition_mask(binary_terrain)
+        for x in range(self.terrain_handler.width):
+            for z in range(self.terrain_handler.length):
+                if edge_mask[x, z] == 1:
+                    mask = self._update_mask_grid_with_radius(mask, x, z, 2, set_to=1)
         return mask
 
     def _get_water_mask(self, cutoff_height=-20) -> np.ndarray:
@@ -261,18 +311,29 @@ class ObjectHandler:
         Returns:
             np.ndarray: Water mask
         """
-        return 1 - self._get_land_mask(cutoff_height=cutoff_height)
+        # assume more water than land, so start with zeros
+        mask = np.zeros(
+            (
+                self.terrain_handler.width,
+                self.terrain_handler.length,
+            )
+        )
+        # check each point against the raw terrain height
+        for x in range(self.terrain_handler.width):
+            for z in range(self.terrain_handler.length):
+                if self.terrain_handler.get_height(x, z) < cutoff_height:
+                    mask[x, z] = 1
+        # dont add the special edge mask (to avoid putting sea objects on the land)
+        return mask
 
-    def _get_coast_mask(
-        self, cutoff_height: int = -20, radius_percent: int = 30
-    ) -> np.ndarray:
+    def _get_coast_mask(self, cutoff_height: int = -20, radius: int = 50) -> np.ndarray:
         """Generates a boolean map grid, where 1 is coast and 0 not coast, within a
-        radius of the max width/length of the terrain. Default radius is 30%
+        radius of the max width/length of the terrain. Default radius is 50
 
         Args:
             cutoff_height (int, optional): Height above which is considered coast.
             Defaults to -20.
-            radius_percent (int, optional): Radius of the coast mask. Defaults to 30[%].
+            radius (int, optional): Radius of the coast mask. Defaults to 50.
 
         Returns:
             np.ndarray: Coast mask
@@ -292,15 +353,6 @@ class ObjectHandler:
         binary_terrain[binary_terrain > 0] = 1
         edge_mask = self._get_binary_transition_mask(binary_terrain)
 
-        # set acceptable spawn within radius_percent% map dims radius of any terrain
-        # ... point (this is a crude way to capture the shore, if we then crop out land)
-        radius = (
-            radius_percent
-            / 100
-            * max(self.terrain_handler.width, self.terrain_handler.length)
-        )
-        radius = int(radius)
-
         # Only apply radius around points that are both edges and above cutoff height
         for x in range(self.terrain_handler.width):
             for z in range(self.terrain_handler.length):
@@ -318,7 +370,7 @@ class ObjectHandler:
         required_radius: float = 1,
         consider_objects: bool = True,
         consider_zones: bool = False,
-        consider_zone_extra_spacing: bool = False,
+        extra_zone_spacing: bool = False,
         in_zone: ZoneMarker = None,
         extra_masks: np.ndarray = None,
     ) -> tuple[float, float]:
@@ -334,11 +386,9 @@ class ObjectHandler:
             ...Defaults to True.
             consider_zones (bool, optional): Whether to consider other zones.
             ...Defaults to False.
-            consider_zone_extra_spacing (bool, optional): Whether to consider extra
+            extra_zone_spacing (bool, optional): Whether to consider extra
             ...spacing around zones. Defaults to False.
             in_zone (ZoneMarker, optional): Zone to place the object in. Defaults to None.
-            extra_masks (np.ndarray, optional): Array of masks to consider. Defaults to None.
-
         Returns:
             tuple[float, float]: x,z location of the object
         """
@@ -362,16 +412,44 @@ class ObjectHandler:
         else:
             mask *= self._get_land_mask()
 
+        # Create a heatmap visualization of the mask
+        # import matplotlib.pyplot as plt
+
+        # plt.figure(figsize=(10, 10))
+        # plt.imshow(mask, cmap="hot", interpolation="nearest")
+        # plt.colorbar(label="Mask Value")
+        # plt.title("Mask Heatmap")
+        # plt.xlabel("X")
+        # plt.ylabel("Z")
+        # plt.show()
+
         # apply that mask to the other masks specified in the argument
         if consider_objects:
             mask *= self._get_object_mask()
         if consider_zones and in_zone is None:
             mask *= self._get_all_zone_mask()
-        if consider_zone_extra_spacing:
-            mask *= self._get_zone_seperation_mask()
+
+        # plt.figure(figsize=(10, 10))
+        # plt.imshow(mask, cmap="hot", interpolation="nearest")
+        # plt.colorbar(label="Mask Value")
+        # plt.title("Mask Heatmap")
+        # plt.xlabel("X")
+        # plt.ylabel("Z")
+        # plt.show()
+        if extra_zone_spacing:
+            mask *= self._get_zone_seperation_mask(
+                extra_zone_spacing=extra_zone_spacing
+            )
         if extra_masks is not None:
             mask *= extra_masks
 
+        # plt.figure(figsize=(10, 10))
+        # plt.imshow(mask, cmap="hot", interpolation="nearest")
+        # plt.colorbar(label="Mask Value")
+        # plt.title("Mask Heatmap")
+        # plt.xlabel("X")
+        # plt.ylabel("Z")
+        # plt.show()
         # detect edges, and for each edge draw a circle of radius required_radius
         # ... (rounded up to closest int)
         required_radius = max(1, round(required_radius))
@@ -457,6 +535,8 @@ class ObjectHandler:
         object_template: list[ObjectContainer],
         consider_zones: bool = False,
         in_zone: ZoneMarker = None,
+        extra_masks: np.ndarray = None,
+        team_override: Union[int | Team] = None,
     ) -> None:
         """A special version of add on land - it identifies a location, but then adds
         multiple objects based on the relative positioning to the first
@@ -465,6 +545,7 @@ class ObjectHandler:
             object_template (list[ObjectContainer]): list of [reference, additional1, additional2, ...]
             consider_zones (bool, optional): If True, the function will consider zones when placing objects. Defaults to False.
             in_zone (ZoneMarker, optional): The zone to place the objects in. Defaults to None.
+            extra_masks (np.ndarray, optional): An extra mask to consider when placing objects. Defaults to None.
         """
         logging.info(f"Starting template add ({len(object_template)} objects)")
         # get info from the reference object
@@ -474,6 +555,7 @@ class ObjectHandler:
             required_radius=ref_object.required_radius,
             consider_zones=consider_zones,
             in_zone=in_zone,
+            extra_masks=extra_masks,
         )
         if returnval is None:
             return
@@ -490,6 +572,8 @@ class ObjectHandler:
 
         # now use the normal add object method
         team = ref_object.team
+        if team_override:
+            team = team_override
         self.ob3_interface.add_object(
             object_type=ref_object.object_type,
             location=np.array([x, height + ref_object.y_offset, z]),
@@ -508,6 +592,8 @@ class ObjectHandler:
                 ]
             )
             team = obj_dict.team
+            if team_override:
+                team = team_override
             # and add the subsquent object
             self.ob3_interface.add_object(
                 object_type=obj_dict.object_type,
@@ -569,6 +655,46 @@ class ObjectHandler:
             y_rotation=y_rotation,
         )
 
+    def add_alien_misc(
+        self, map_size: str, carrier_xz: tuple[float, float] = None
+    ) -> None:
+        """Adds a few misc objects to the level (radar, AA guns etc)
+
+        Args:
+            map_size (str): Size of the map
+            carrier_xz (tuple[float, float], optional): Carrier location in xz. Defaults to None.
+
+
+
+        """
+        # TODO in future, switch below on map size - the below seems reasonable
+        # ... for 'large' 256x256
+        extra_mask = None
+        if carrier_xz is not None:
+            # create an exclusion mask within radius of 60 of the carrier (e.g.
+            # ... dont put a radar where the carrier will see it)
+            extra_mask = self._update_mask_grid_with_radius(
+                np.ones(
+                    (self.terrain_handler.width, self.terrain_handler.length),
+                    dtype=np.uint8,
+                ),
+                carrier_xz[0],
+                carrier_xz[1],
+                60,
+                set_to=0,
+            )
+
+        # NOTE currently only templates
+        objs = [TEMPLATE_ALIEN_AA] * 2 + [TEMPLATE_ALIEN_RADAR] * 2
+        for obj in objs:
+            if isinstance(obj, tuple):
+                self.add_object_template_on_land_random(
+                    object_template=obj,
+                    consider_zones=True,
+                    extra_masks=extra_mask,
+                )
+        logging.info(f"Done adding {len(objs)} alien misc objects")
+
     def add_scenery(self, map_size: str) -> None:
         """Adds a lot of random/different scenery objects to the level"""
         # TODO in future, switch below on map size - the below seems reasonable
@@ -603,7 +729,9 @@ class ObjectHandler:
         zone_type: ZoneType,
         zone_size: ZoneSize,
         zone_subtype: ZoneSubType,
+        zone_index: Union[int, None] = None,
         extra_masks: Optional[np.ndarray] = None,
+        extra_zone_spacing: int = 40,
     ) -> None:
         """Adds a zone marker to the map based on the size via a lookup.
 
@@ -611,7 +739,9 @@ class ObjectHandler:
             zone_type (ZoneType): Type of zone to create
             zone_size (ZoneSize): Size of the zone to create
             zone_subtype (ZoneSubType): Special type for the zone
+            zone_index (int): Index of the zone (used for enemy team grouping)
             extra_masks (Optional[np.ndarray], optional): Additional mask to consider for placement. Defaults to None.
+            extra_zone_spacing (bool, optional): Whether to consider the extra spacing around zones. Defaults to True.
         """
         # create zone marker object and store it
         new_zone = ZoneMarker(
@@ -620,6 +750,7 @@ class ObjectHandler:
             zone_type=zone_type,
             zone_size=zone_size,
             zone_subtype=zone_subtype,
+            zone_index=zone_index,
         )
         # find a land location we can place the radius zone at (with some buffer)
         # ... with special args to consider only other zones
@@ -628,7 +759,7 @@ class ObjectHandler:
             required_radius=new_zone.radius,
             consider_objects=False,
             consider_zones=True,
-            consider_zone_extra_spacing=True,
+            extra_zone_spacing=extra_zone_spacing,
             extra_masks=extra_masks,
         )
         # and update the zone marker with the actual location
@@ -725,12 +856,14 @@ class ObjectHandler:
         for obj in priority_1_objs + priority_2_objs + all_base_objs:
             # check if obj is a list (template) or a single object
             if isinstance(obj, tuple):
-                self.add_object_template_on_land_random(obj, in_zone=zone)
+                self.add_object_template_on_land_random(
+                    obj, in_zone=zone, team_override=zone.zone_index
+                )
             else:
                 self.add_object_on_land_random(
                     obj.object_type,
                     attachment_type=obj.attachment_type,
-                    team=obj.team,
+                    team=obj.team if zone.zone_index is None else zone.zone_index,
                     required_radius=obj.required_radius,
                     y_rotation=self.noise_generator.randint(0, 360),
                     y_offset=obj.y_offset,
