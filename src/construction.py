@@ -41,6 +41,7 @@ AVAILABLE_SOULCATCHERS = [
     "Kenzie",
     "Lazare",
 ]
+
 AVAILABLE_WEAPONS = [
     "Minigun",
     "Missile",
@@ -89,9 +90,9 @@ class ConstructionManager:
             )
         logging.info(f"Added {len(picked_sublist)} vehicles")
 
-        # Step 2 - soulcatchers (ensure at least 4)
+        # Step 2 - soulcatchers (ensure at least 6 for balance)
         picked_soulcatchers = self.noise_generator.select_random_sublist_from_list(
-            AVAILABLE_SOULCATCHERS, min_n=4
+            AVAILABLE_SOULCATCHERS, min_n=6
         )
         for soulcatcher in picked_soulcatchers:
             self.ars_file.add_action_to_existing_record(
@@ -104,13 +105,21 @@ class ConstructionManager:
             )
         logging.info(f"Added {len(picked_soulcatchers)} soulcatchers")
 
-        # Step 3 - weapons (ensure at least 1 non-EMP weapon)
+        # Step 3 - weapons (ensure either longbow or minigun always - for balance)
+        picked_weapons = self.noise_generator.select_random_sublist_from_list(
+            [
+                "Minigun",
+                "Missile",
+            ]
+        )
         non_emp_weapons = [w for w in AVAILABLE_WEAPONS if w != "EMP"]
         # First pick at least one non-EMP weapon
-        picked_weapons = self.noise_generator.select_random_sublist_from_list(
-            non_emp_weapons, min_n=1, max_n=1
+        picked_weapons.extend(
+            self.noise_generator.select_random_sublist_from_list(
+                non_emp_weapons, min_n=1, max_n=1
+            )
         )
-        # Then potentially add more weapons including EMP
+        # Then potentially add more weapons including EMP (at least 1 more)
         additional_weapons = self.noise_generator.select_random_sublist_from_list(
             AVAILABLE_WEAPONS, min_n=0
         )
