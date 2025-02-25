@@ -246,6 +246,8 @@ class TerrainHandler:
                     avg_height += self.terrain_points[x, y].height
                     count += 1
         avg_height /= count
+        # set min height - to avoid spawning things in water
+        avg_height = max(avg_height, 60)
         logging.info("Zone: Flattening terrain: Found average height")
         # set the height of all points within the zone to the average height
         for x in range(self.width):
