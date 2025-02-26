@@ -13,6 +13,7 @@ from fileio.cfg import CfgFile
 from fileio.lev import LevFile
 from fileio.ob3 import Ob3File
 from fileio.ars import ArsFile
+from fileio.pat import PatFile
 import src.object_templates as ot
 
 from construction import ConstructionManager
@@ -31,6 +32,7 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
+    noise_generator = NoiseGenerator(seed=6666)  # 9977 strange terrain textures
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -43,6 +45,7 @@ def main():
     lev_data = LevFile(template_root / f"{map_size_template}.lev")
     ars_data = ArsFile(template_root / "common.ars")
     ob3_data = Ob3File("")  # no template ob3 required
+    pat_data = PatFile("")  # no template pat required
     # S0U file is basic for now - we have merged everything into a single file
     os.makedirs(OUTPUT_PATH / NEW_LEVEL_NAME, exist_ok=True)
     shutil.copy(
@@ -91,6 +94,8 @@ def main():
     zone_manager = ZoneManager(object_handler, noise_generator)
     # add a small scrap zone near the carrier - so the player has some EJ
     xr, zr = zone_manager.add_tiny_scrap_near_carrier_and_calc_rally(carrier_mask)
+    # put a map revealer location at the center of the first zone
+    object_handler.add_object_centered_on_zone("MapRevealer1", object_handler.zones[0])
     yr = terrain_handler.get_height(xr, zr)
     cfg_data["RallyPoint"] = f"{zr*10*51.7:.6f},{yr:.6f},{xr*10*51.7:.6f}"
     # ensure at least one enemy base - else we win straight away
@@ -117,6 +122,23 @@ def main():
     # add a few random alien aa guns, radars etc
     object_handler.add_alien_misc(carrier_xz=[xr, zr], map_size=map_size_template)
     # object_handler.add_scenery(map_size=map_size_template)
+    # pick 3-7 random points within the map, then generate a convex hull
+    patrol_points = object_handler.create_patrol_points_hull(
+        n_points=noise_generator.randint(3, 7)
+    )
+    pat_data.add_patrol_record("patrol1", patrol_points)
+    for _ in range(noise_generator.randint(3, 7)):
+        new_obj_id = object_handler.add_object_on_land_random(
+            "MediumFlyer" if noise_generator.randint(0, 11) > 5 else "SmallFlyer",
+            team=7,
+            required_radius=1,
+            y_offset=15,
+        )
+        ars_data.add_action_to_existing_record(
+            record_name="HWAE patrol 1",
+            action_title="AIScript_AssignRoute",
+            action_details=['"patrol1"', f"{new_obj_id - 1}"],
+        )
 
     # STEP 5 - GENERATE MINIMAP FROM FINAL MAP TEXTURES
     generate_minimap(
@@ -140,7 +162,7 @@ def main():
             )
 
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
-    for file in [lev_data, cfg_data, ob3_data, ars_data]:
+    for file in [lev_data, cfg_data, ob3_data, ars_data, pat_data]:
         file.save(OUTPUT_PATH / NEW_LEVEL_NAME, NEW_LEVEL_NAME)
 
     # STEP xxx - delete any .aim file in the new level directory (force rebuild)

@@ -48,6 +48,7 @@ from object_templates import (
     TEMPLATE_ALIEN_AA,
     TEMPLATE_ALIEN_RADAR,
 )
+from tests.test_noisegen import noise_generator
 
 
 class LocationEnum(IntEnum):
@@ -472,7 +473,7 @@ class ObjectHandler:
         return None
 
     def add_carrier_and_return_mask(
-        self, required_radius: int = 30, mask_radius: int = 50
+        self, required_radius: int = 30, mask_radius: int = 60
     ) -> np.ndarray:
         """Finds a location for the carrier, by using a coast search with a large
         required radius, then adds the object directly (special as it also sets the
@@ -480,7 +481,7 @@ class ObjectHandler:
 
         Args:
             required_radius (int, optional): Required radius of the carrier. Defaults to 30.
-            mask_radius (int, optional): Radius of the mask. Defaults to 70.
+            mask_radius (int, optional): Radius of the mask. Defaults to 60.
 
         Returns:
             np.ndarray: Mask in the carrier's radius for placing extra objects/zones
@@ -613,7 +614,7 @@ class ObjectHandler:
         required_radius: float = 1,
         consider_zones: bool = False,
         in_zone: ZoneMarker = None,
-    ) -> None:
+    ) -> int:
         """Creates a new object in the level, selects a random land location, then
         uses the normal add object method with the height determined from the terrain
 
@@ -627,6 +628,9 @@ class ObjectHandler:
             required_radius (float, optional): Keep-clear radius of this new object. Defaults to 1.
             consider_zones (bool, optional): Whether to consider other zones. Defaults to False.
             in_zone (ZoneMarker, optional): Zone to place the object in. Defaults to None.
+
+        Returns:
+            int: The ID of the new object
         """
         # below defaults to add on land
         returnval = self._find_location(
@@ -647,7 +651,7 @@ class ObjectHandler:
         self._update_cached_object_mask(x, z, int(required_radius))
 
         # now use the normal add object method
-        self.ob3_interface.add_object(
+        return self.ob3_interface.add_object(
             object_type=object_type,
             location=np.array([x, height + y_offset, z]),
             attachment_type=attachment_type,
@@ -870,3 +874,41 @@ class ObjectHandler:
                     in_zone=zone,
                 )
         logging.info("Populating zone: " + str(zone) + " completed")
+
+    def create_patrol_points_hull(self, n_points: int = 3) -> None:
+        """Generates a convex hull around the patrol points
+
+        Args:
+            n_points (int): Number of patrol points to use
+        """
+        # select 5 points at random using noisegen from the map coords
+        points = []
+        for _ in range(n_points):
+            x, z = self.noise_generator.select_random_entry_from_2d_array(
+                self._get_land_mask()
+            )
+            y = self.terrain_handler.get_height(x, z) + self.noise_generator.randint(
+                55, 100
+            )
+            points.append((x, y, z))
+        # if we stick to 3 points, we dont need to use a convex hull - triangles
+        # ... are always convex
+        return points
+
+    def add_object_centered_on_zone(self, object_type: str, zone: ZoneMarker) -> int:
+        """Adds an object centered on the zone
+
+        Args:
+            object_type (str): Type of object
+            zone (ZoneMarker): Zone object defining the location
+
+        Returns:
+            int: The ID of the new object
+        """
+        x, z = zone.x, zone.z
+        y = self.terrain_handler.get_height(x, z)
+        self.ob3_interface.add_object(
+            object_type=object_type,
+            location=[x, y, z],
+            team=Team.NEUTRAL,
+        )

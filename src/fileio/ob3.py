@@ -205,7 +205,7 @@ class Ob3File:
         attachment_type: str = "",
         team: int = 1,
         y_rotation: float = 0,
-    ) -> None:
+    ) -> int:
         """Add a new object to the OB3 file.
 
         Args:
@@ -214,6 +214,9 @@ class Ob3File:
             attachment_type (str): Type of attachment
             team (int): Team number (0=player, 1+=enemy, 0xFFFF=neutral)
             y_rotation (float): Rotation of the object in degrees
+
+        Returns:
+            int: The ID of the new object
         """
         # create a new _OB3Object with its default values
         new_obj = _OB3Object()
@@ -240,6 +243,7 @@ class Ob3File:
         logging.info(
             f"Added new object of type '{object_type}' with ID {new_obj.my_id}"
         )
+        return new_obj.my_id
 
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Save objects to file

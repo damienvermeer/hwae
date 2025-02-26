@@ -95,3 +95,10 @@ Condition: AIScript_CountdownTimer
   0
 Action: AIScript_EndLevel
 }
+
+Trigger: "HWAE patrol 1" :  AIS_SPECIFICPLAYER : 7: BOOL_AND
+{
+Condition: AIScript_ElapsedTime
+  AIS_GREATEREQUAL
+  1
+}

@@ -7,11 +7,11 @@ FORS
 3
 4
 5
+6
+7
 [Force2] 1
 [Force3] 1
 [Force4] 1
 [Force5] 1
 [Force6] 1
-6
 [Force7] 1
-7
