@@ -183,6 +183,8 @@ class ZoneManager:
         zone_subtype = self.noise_generator.select_random_from_weighted_dict(
             ZONE_SUBTYPE_WEIGHTS[ZoneType.SCRAP]
         )
+        # update the allowed max subtype zones to have 1 fewer
+        ALLOWED_MAX_SUBTYPE_ZONES[ZoneType.SCRAP][zone_subtype] -= 1
         self.object_handler.add_zone(
             ZoneType.SCRAP,
             ZoneSize.TINY,
