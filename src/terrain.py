@@ -177,7 +177,7 @@ class TerrainHandler:
         # ... noise in it. scale the map between 0 and 4 (integers only)
         N = 5  # number of 'normal textures'
         noise_map = self.noise_gen.random_noisemap(
-            self.width, self.length, persistence=1
+            self.width, self.length
         )
         # Map noise values (0-1) to texture indices (0-N) with decreasing frequency
         # Create thresholds that give exponentially less space to higher values
