@@ -458,13 +458,7 @@ class ObjectHandler:
         for x in range(self.terrain_handler.width):
             for z in range(self.terrain_handler.length):
                 if edge_mask[x, z] == 1:
-                    mask = self._update_mask_grid_with_radius(
-                        mask,
-                        x,
-                        z,
-                        required_radius // 2,
-                        set_to=0,  # mark as not allowed
-                    )
+                    mask = self._update_mask_grid_with_radius(mask, x, z, required_radius // 2, set_to=0)
 
         # check if we have any non-zero values in the edge mask
         if np.any(mask):
@@ -736,7 +730,7 @@ class ObjectHandler:
         zone_index: Union[int, None] = None,
         extra_masks: Optional[np.ndarray] = None,
         extra_zone_spacing: int = 40,
-    ) -> None:
+    ) -> Optional[ZoneMarker]:
         """Adds a zone marker to the map based on the size via a lookup.
 
         Args:
@@ -746,36 +740,57 @@ class ObjectHandler:
             zone_index (int): Index of the zone (used for enemy team grouping)
             extra_masks (Optional[np.ndarray], optional): Additional mask to consider for placement. Defaults to None.
             extra_zone_spacing (bool, optional): Whether to consider the extra spacing around zones. Defaults to True.
+            
+        Returns:
+            Optional[ZoneMarker]: The created zone marker if successful, None otherwise
         """
-        # create zone marker object and store it
-        new_zone = ZoneMarker(
-            x=0,
-            z=0,
-            zone_type=zone_type,
-            zone_size=zone_size,
-            zone_subtype=zone_subtype,
-            zone_index=zone_index,
-        )
-        # find a land location we can place the radius zone at (with some buffer)
-        # ... with special args to consider only other zones
-        location = self._find_location(
-            where=LocationEnum.LAND,
-            required_radius=new_zone.radius,
-            consider_objects=False,
-            consider_zones=True,
-            extra_zone_spacing=extra_zone_spacing,
-            extra_masks=extra_masks,
-        )
-        # and update the zone marker with the actual location
-        if location is not None:
-            new_zone.x = location[0]
-            new_zone.z = location[1]
-            # TODO do these need to be backwards?
-            self.zones.append(new_zone)
-            return
+        # Try each size, starting with the requested size and going smaller if needed
+        current_size = zone_size
+        
+        while current_size >= ZoneSize.TINY:
+            # create zone marker object with current size
+            new_zone = ZoneMarker(
+                x=0,
+                z=0,
+                zone_type=zone_type,
+                zone_size=current_size,
+                zone_subtype=zone_subtype,
+                zone_index=zone_index,
+            )
+            
+            # find a land location we can place the radius zone at (with some buffer)
+            # ... with special args to consider only other zones
+            location = self._find_location(
+                where=LocationEnum.LAND,
+                required_radius=new_zone.radius,
+                consider_objects=False,
+                consider_zones=True,
+                extra_zone_spacing=extra_zone_spacing,
+                extra_masks=extra_masks,
+            )
+            
+            # and update the zone marker with the actual location
+            if location is not None:
+                new_zone.x = location[0]
+                new_zone.z = location[1]
+                # TODO do these need to be backwards?
+                self.zones.append(new_zone)
+                return new_zone
+            
+            # If we couldn't place it, try a smaller size
+            if current_size > ZoneSize.TINY:
+                logging.info(
+                    f"Could not find location for zone {zone_type} {current_size} {zone_subtype}, trying smaller size"
+                )
+                current_size = ZoneSize(current_size - 1)
+            else:
+                # We've tried the smallest size and still couldn't place it
+                break
+        
         logging.info(
-            f"Could not find location for zone {zone_type} {zone_size} {zone_subtype}"
+            f"Could not find location for zone {zone_type} {zone_size} {zone_subtype} even at smallest size"
         )
+        return None
 
     def populate_zone(self, zone: ZoneMarker) -> None:
         """Populates a zone with objects based on the zone type and size.

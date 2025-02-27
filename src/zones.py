@@ -150,25 +150,36 @@ class ZoneManager:
         for zone_to_add in [
             x for x in _zones_to_place if x[2] != ZoneSubType.PUMP_OUTPOST
         ]:
-            self.object_handler.add_zone(*zone_to_add)
+            zone = self.object_handler.add_zone(*zone_to_add)
+            if zone is None:
+                logging.warning(f"Failed to add zone {zone_to_add}")
 
         # now they've been added, add the linked pump zones
         for zone_to_add in [
             x for x in _zones_to_place if x[2] == ZoneSubType.PUMP_OUTPOST
         ]:
             # find the base zone with the same index
-            base_zone = [
+            base_zones = [
                 x for x in self.object_handler.zones if x.zone_index == zone_to_add[3]
-            ][0]
+            ]
+            if not base_zones:
+                logging.warning(f"No base zone found with index {zone_to_add[3]}")
+                continue
+
+            base_zone = base_zones[0]
             # and add a pump zone within a radius of the base zone
-            self.object_handler.add_zone(
+            zone = self.object_handler.add_zone(
                 *zone_to_add,
                 extra_masks=self.object_handler.get_inclusion_mask_at_location(
                     base_zone.x, base_zone.z, 40
                 )
                 * self.object_handler._get_all_zone_mask([base_zone]),
-                extra_zone_spacing=20  # try reduced spacing
+                extra_zone_spacing=20,  # try reduced spacing
             )
+            if zone is None:
+                logging.warning(
+                    f"Failed to add pump zone {zone_to_add} near base zone {base_zone}"
+                )
 
     def add_tiny_scrap_near_carrier_and_calc_rally(
         self, carrier_mask: np.ndarray
@@ -185,23 +196,28 @@ class ZoneManager:
         )
         # update the allowed max subtype zones to have 1 fewer
         ALLOWED_MAX_SUBTYPE_ZONES[ZoneType.SCRAP][zone_subtype] -= 1
-        self.object_handler.add_zone(
+        zone = self.object_handler.add_zone(
             ZoneType.SCRAP,
             ZoneSize.TINY,
             zone_subtype,
             extra_masks=carrier_mask,
         )
-        # create a custom mask within a radius of 6 of the new scrap zone
+
+        if zone is None:
+            logging.warning("Failed to add tiny scrap zone near carrier")
+            return
+
+        # create a custom mask within a radius of 9 of the new scrap zone
         nearby_scrap_mask = self.object_handler._update_mask_grid_with_radius(
             np.zeros_like(carrier_mask),
-            radius=8,
+            radius=15,
             x=self.object_handler.zones[0].x,
             z=self.object_handler.zones[0].z,
             set_to=1,
         )
         # find a location
         x, z = self.object_handler._find_location(
-            required_radius=1,
+            required_radius=3,
             consider_zones=True,
             extra_masks=nearby_scrap_mask,
         )
