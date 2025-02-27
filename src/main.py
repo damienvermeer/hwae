@@ -14,6 +14,7 @@ from fileio.lev import LevFile
 from fileio.ob3 import Ob3File
 from fileio.ars import ArsFile
 from fileio.pat import PatFile
+from fileio.ail import AilFile
 import src.object_templates as ot
 
 from construction import ConstructionManager
@@ -32,7 +33,7 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=6666)  # 9977 strange terrain textures
+    noise_generator = NoiseGenerator(seed=435345)  # 9977 strange terrain textures
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"
@@ -46,6 +47,7 @@ def main():
     ars_data = ArsFile(template_root / "common.ars")
     ob3_data = Ob3File("")  # no template ob3 required
     pat_data = PatFile("")  # no template pat required
+    ail_data = AilFile("")  # no template ail required
     # S0U file is basic for now - we have merged everything into a single file
     os.makedirs(OUTPUT_PATH / NEW_LEVEL_NAME, exist_ok=True)
     shutil.copy(
@@ -146,7 +148,11 @@ def main():
     )
 
     # STEP 7 - FINALISE SCRIPT/TRIGGERS
-    if True:  # TODO if a crate zone is present
+    weapon_zone = [
+        x for x in object_handler.zones if x.zone_subtype == ZoneSubType.WEAPON_CRATE
+    ]
+    if weapon_zone:  # TODO if a crate zone is present
+        weapon_zone = weapon_zone[0]
         ars_data.load_additional_data(
             template_root / "zone_specific" / "weapon_crate.ars"
         )
@@ -160,9 +166,15 @@ def main():
                     f"AIS_UNITTYPE_SPECIFIC : {spare_weapon}",
                 ],
             )
+        # update the ail file - get the info from the crate zone
+        zone_x, zone_z = weapon_zone.x, weapon_zone.z
+        ail_data.add_area_record(
+            name="near_crate_zone",
+            bounding_box=(zone_z - 30, zone_x - 30, zone_z + 30, zone_x + 30),
+        )
 
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
-    for file in [lev_data, cfg_data, ob3_data, ars_data, pat_data]:
+    for file in [lev_data, cfg_data, ob3_data, ars_data, pat_data, ail_data]:
         file.save(OUTPUT_PATH / NEW_LEVEL_NAME, NEW_LEVEL_NAME)
 
     # STEP xxx - delete any .aim file in the new level directory (force rebuild)

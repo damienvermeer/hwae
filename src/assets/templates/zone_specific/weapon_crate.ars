@@ -1,3 +1,17 @@
+Trigger: "HWAE_zone_specific go near weapon" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+{
+Condition: AIScript_Bring
+  AIS_SPECIFICPLAYER : 0
+  1
+  AIS_UNITTYPE_FRIENDLYVEHICLE
+  AIS_LOCATION_SPECIFIC : near_crate_zone
+Action: AIScript_PlaySound
+  "1617"
+Action: AIScript_SetMissionObjectives
+  2
+  "Sample weapon crate"
+Action: AIScript_DisplayMissionObjectives
+}
 
 Trigger: "HWAE_zone_specific sample crate for weapon" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
 {
