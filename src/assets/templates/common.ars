@@ -102,3 +102,11 @@ Condition: AIScript_ElapsedTime
   AIS_GREATEREQUAL
   1
 }
+
+
+Trigger: "HWAE set carrier shells" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
+{
+Condition: AIScript_ElapsedTime
+  AIS_GREATEREQUAL
+  0
+}

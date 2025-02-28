@@ -172,6 +172,12 @@ def main():
             name="near_crate_zone",
             bounding_box=(zone_z - 30, zone_x - 30, zone_z + 30, zone_x + 30),
         )
+    # set carrier shells
+    ars_data.add_action_to_existing_record(
+        record_name="HWAE set carrier shells",
+        action_title="AIScript_SetCarrierShells",
+        action_details=[str(noise_generator.randint(1, 4))],
+    )
 
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data, pat_data, ail_data]:
