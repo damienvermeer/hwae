@@ -17,9 +17,12 @@ def main():
     # Get the project root directory
     project_root = Path(__file__).resolve().parent.parent
     src_dir = project_root / "src"
+    sys.path.append(str(src_dir))
     build_dir = project_root / "build"
     dist_dir = project_root / "dist"
     assets_dir = src_dir / "assets"
+
+    from constants import VERSION_STR
 
     # Create build directory if it doesn't exist
     build_dir.mkdir(exist_ok=True)
@@ -52,7 +55,7 @@ def main():
             "fileio",
             "--hidden-import",
             "tkinter",
-            "--name=hwae.exe",
+            f"--name=HW Antaeus Eternal v{VERSION_STR}.exe",
             "--clean",
             "--distpath",
             str(dist_dir),
@@ -63,6 +66,9 @@ def main():
             "--add-data",
             f"{src_dir / 'paths.py'};.",
             str(src_dir / "main.py"),
+            # set icon
+            "--icon",
+            str(assets_dir / "icon.ico"),
         ]
     )
 

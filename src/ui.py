@@ -39,6 +39,7 @@ class GUI:
         self.root.title(f"Hostile Waters: Antaeus Eternal")
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.resizable(False, False)
+        self.root.iconbitmap(get_assets_path() / "icon.ico")
 
         # Set up the main frame
         self.main_frame = ttk.Frame(self.root, padding="10")
