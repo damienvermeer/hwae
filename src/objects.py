@@ -699,6 +699,8 @@ class ObjectHandler:
                     object_template=obj,
                     consider_zones=True,
                     extra_masks=extra_mask,
+                    team_override=7,  # Set the objects to the last alien team
+                    # ^ so we only alert roaming enemies, not bases
                 )
         logger.info(f"Done adding {len(objs)} alien misc objects")
 

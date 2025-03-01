@@ -19,9 +19,9 @@ from config_loader import MapConfig
 
 
 AVAILABLE_VEHCILES = [
-    "chopper",
     # ALWAYS IN "Harvester",
     # ALWAYS IN "Lifter",
+    "chopper",
     "HeavyTank",
     "Supertank",
     "Superchopper",
@@ -32,7 +32,7 @@ AVAILABLE_VEHCILES = [
     "Superhover",
 ]
 AVAILABLE_SOULCATCHERS = [
-    # always picks at least 4
+    # always picks at least 6
     "Ransom",
     "Borden",
     "Madsen",
@@ -46,8 +46,10 @@ AVAILABLE_SOULCATCHERS = [
 ]
 
 AVAILABLE_WEAPONS = [
+    # always picks at least 1 of the below
     "Minigun",
     "Missile",
+    # may pick more from below
     "Flamer",
     "Lobber",
     "EMP",
@@ -57,9 +59,11 @@ AVAILABLE_WEAPONS = [
 AVAILABLE_ADDONS = [
     # ALWAYS IN "soulunit",
     # ALWAYS IN "scavunit",
+    # always picks at least 1 of the below
     "armour",
-    "Cooler",
     "Shield",
+    # may pick more from below
+    "Cooler",
     "Cloak",
     "Repair",
 ]
@@ -160,15 +164,26 @@ class ConstructionManager:
             )
 
     def _select_random_addons(self) -> None:
-        picked_addons = self.noise_generator.select_random_sublist_from_list(
-            AVAILABLE_ADDONS, min_n=1
+        picked_addons = []
+        # First pick either armour or Shield
+        mandatory_addons = ["armour", "Shield"]
+        picked_addons.extend(
+            self.noise_generator.select_random_sublist_from_list(
+                mandatory_addons, min_n=1, max_n=1
+            )
         )
+        # Then potentially add more addons
+        additional_addons = self.noise_generator.select_random_sublist_from_list(
+            AVAILABLE_ADDONS, min_n=0
+        )
+        picked_addons.extend([a for a in additional_addons if a not in picked_addons])
         for extra_addon in self.map_config.addon_include_list:
             logger.info(f"Adding extra addon: {extra_addon} as requested by config")
             if extra_addon in picked_addons or extra_addon not in AVAILABLE_ADDONS:
                 logger.info(f"Addon {extra_addon} skipped")
                 continue
             picked_addons.append(extra_addon)
+
         for addon in picked_addons:
             self.ars_file.add_action_to_existing_record(
                 record_name="BUILD_SETUP",

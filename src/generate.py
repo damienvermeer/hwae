@@ -201,7 +201,7 @@ def generate_new_map(
     for _ in range(noise_generator.randint(3, 7)):
         new_obj_id = object_handler.add_object_on_land_random(
             "MediumFlyer" if noise_generator.randint(0, 11) > 5 else "SmallFlyer",
-            team=7,
+            team=7,  # <-- use the last alien team, same as scattered AA and radar
             required_radius=1,
             y_offset=15,
         )
