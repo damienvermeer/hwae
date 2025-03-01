@@ -146,7 +146,27 @@ class GUI:
 
     def _start_random_generation(self):
         """Start random map generation with default configuration"""
-        self._start_map_generation("default")
+        self._start_map_generation("")
+
+    def flag_as_complete(self):
+        """Flag the current generation as complete"""
+        # Schedule the UI update on the main thread
+        self.root.after(0, self._update_ui_after_completion)
+
+    def _update_ui_after_completion(self):
+        """Update the UI after completion (called from the main thread)"""
+        # Reset generation flag
+        self.generation_in_progress = False
+        self.current_progress_step = 0
+
+        # enable all buttons
+        self.select_exe_button["state"] = "normal"
+        self.random_button["state"] = "normal"
+        self.json_button["state"] = "normal"
+        # set the display text to "Completed"
+        self.status_label.config(text="Generation Complete!")
+        # empty the progress bar
+        self.progress_bar["value"] = 0
 
     def _start_map_generation(self, config_path):
         """Start map generation with the specified configuration
@@ -168,35 +188,13 @@ class GUI:
                 target=generate_new_map,
                 kwargs={
                     "progress_callback": self.update_progress_bar_to_next_step,
+                    "complete_callback": self.flag_as_complete,
                     "config_path": config_path,
                     "exe_parent": self.hwar_folder,
                 },
             )
             generation_thread.daemon = True
             generation_thread.start()
-
-    def _generate_map(self, config_path):
-        """Generate a map with the specified configuration
-
-        Args:
-            config_path (str): Path to the JSON configuration file or "default"
-        """
-        try:
-            # Reset progress step counter
-            self.current_progress_step = 0
-
-            # Define status messages for each step
-
-            # Simulate map generation with progress updates
-            for i in range(self.total_progress_steps):
-                # Update progress bar to next step
-                self.update_progress_bar_to_next_step("")
-                # Simulate work
-                time.sleep(0.5)  # Longer delay for fewer steps
-
-        finally:
-            # Re-enable buttons and reset progress flag
-            self.root.after(0, self._reset_ui_after_generation)
 
     def update_progress_bar_to_next_step(self, status_text=""):
         """Update the progress bar to the next step

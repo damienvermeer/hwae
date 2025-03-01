@@ -10,7 +10,10 @@ VERSION = (1, 0, 0)
 VERSION_STR = ".".join(map(str, VERSION))
 
 # Progress steps
-PROGRESS_STEPS = 11
+PROGRESS_STEPS = 16
 
 # Logger name
 LOGGER_NAME = "hwae"
+
+# New level name
+NEW_LEVEL_NAME = "HWAE_Level"

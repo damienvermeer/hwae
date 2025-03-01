@@ -72,9 +72,13 @@ def setup_logger(output_path=None):
         # Ensure the directory exists
         os.makedirs(output_path, exist_ok=True)
 
+        # if the logging file exists, remove it (so we get one log)
+        logpath = Path(output_path) / "hwae_log.csv"
+        if logpath.exists():
+            logpath.unlink()
+
         # Create the CSV handler
-        csv_file = Path(output_path) / "hwae_log.csv"
-        csv_handler = CsvHandler(csv_file)
+        csv_handler = CsvHandler(logpath)
         logger.addHandler(csv_handler)
 
     return logger
@@ -87,3 +91,11 @@ def get_logger():
         logging.Logger: The HWAE logger
     """
     return logging.getLogger(LOGGER_NAME)
+
+
+def close_logger():
+    """Close all handlers for the HWAE logger to release file locks"""
+    logger = logging.getLogger(LOGGER_NAME)
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)

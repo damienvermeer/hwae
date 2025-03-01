@@ -1,0 +1,10 @@
+{
+    "seed": -1,
+    "num_extra_enemy_bases": -1,
+    "num_scrap_zones": -1,
+    "soulcatcher_include_list": [],
+    "weapon_include_list": [],
+    "addon_include_list": [],
+    "vehicle_include_list": [],
+    "starting_ej": -1
+}

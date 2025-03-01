@@ -15,6 +15,7 @@ logger = get_logger()
 import os
 import time
 import copy
+from src.config_loader import MapConfig
 
 
 AVAILABLE_VEHCILES = [
@@ -68,20 +69,20 @@ AVAILABLE_ADDONS = [
 class ConstructionManager:
     ars_file: ArsFile
     noise_generator: NoiseGenerator
+    map_config: MapConfig
 
-    def select_random_construction_availability(self) -> None:
-        """Randomly selects available vehicles, buildings and items for construction
-        including soulcatcher chips.
-
-        To avoid making the levels impossible, scarab and pegasus are in every level.
-        Recycler and soulcatcher are in every level, with at least 3 soul catcher chips.
-        """
-        # Step 1 - vehicles
-        picked_sublist = self.noise_generator.select_random_sublist_from_list(
-            AVAILABLE_VEHCILES, min_n=2
-        )
+    def _select_random_vehicles(self) -> None:
+        picked_sublist = []
+        for extra_vehicle in self.map_config.vehicle_include_list:
+            logger.info(f"Adding extra vehicle: {extra_vehicle} as requested by config")
+            if (
+                extra_vehicle in picked_sublist
+                or extra_vehicle not in AVAILABLE_VEHCILES
+            ):
+                logger.info(f"Vehicle {extra_vehicle} skipped")
+                continue
+            picked_sublist.append(extra_vehicle)
         for vehicle in picked_sublist:
-            # add an action to the existing "BUILD_SETUP" record
             self.ars_file.add_action_to_existing_record(
                 record_name="BUILD_SETUP",
                 action_title="AIScript_MakeAvailableForBuilding",
@@ -92,10 +93,19 @@ class ConstructionManager:
             )
         logger.info(f"Added {len(picked_sublist)} vehicles")
 
-        # Step 2 - soulcatchers (ensure at least 6 for balance)
-        picked_soulcatchers = self.noise_generator.select_random_sublist_from_list(
-            AVAILABLE_SOULCATCHERS, min_n=6
-        )
+    def _select_random_soulcatchers(self) -> None:
+        picked_soulcatchers = []
+        for extra_soulcatcher in self.map_config.soulcatcher_include_list:
+            logger.info(
+                f"Adding extra soulcatcher: {extra_soulcatcher} as requested by config"
+            )
+            if (
+                extra_soulcatcher in picked_soulcatchers
+                or extra_soulcatcher not in AVAILABLE_SOULCATCHERS
+            ):
+                logger.info(f"Soulcatcher {extra_soulcatcher} skipped")
+                continue
+            picked_soulcatchers.append(extra_soulcatcher)
         for soulcatcher in picked_soulcatchers:
             self.ars_file.add_action_to_existing_record(
                 record_name="BUILD_SETUP",
@@ -107,27 +117,15 @@ class ConstructionManager:
             )
         logger.info(f"Added {len(picked_soulcatchers)} soulcatchers")
 
-        # Step 3 - weapons (ensure either longbow or minigun always - for balance)
-        picked_weapons = self.noise_generator.select_random_sublist_from_list(
-            [
-                "Minigun",
-                "Missile",
-            ]
-        )
-        non_emp_weapons = [w for w in AVAILABLE_WEAPONS if w != "EMP"]
-        # First pick at least one non-EMP weapon
-        picked_weapons.extend(
-            self.noise_generator.select_random_sublist_from_list(
-                non_emp_weapons, min_n=1, max_n=1
-            )
-        )
-        # Then potentially add more weapons including EMP (at least 1 more)
-        additional_weapons = self.noise_generator.select_random_sublist_from_list(
-            AVAILABLE_WEAPONS, min_n=0
-        )
-        picked_weapons.extend(
-            [w for w in additional_weapons if w not in picked_weapons]
-        )
+    def _select_random_weapons(self) -> None:
+        picked_weapons = []
+        for extra_weapon in self.map_config.weapon_include_list:
+            logger.info(f"Adding extra weapon: {extra_weapon} as requested by config")
+            if extra_weapon in picked_weapons or extra_weapon not in AVAILABLE_WEAPONS:
+                logger.info(f"Weapon {extra_weapon} skipped")
+                continue
+            picked_weapons.append(extra_weapon)
+        logger.info(f"Added {len(picked_weapons)} total weapons")
         for weapon in picked_weapons:
             self.ars_file.add_action_to_existing_record(
                 record_name="BUILD_SETUP",
@@ -137,12 +135,15 @@ class ConstructionManager:
                     f"AIS_UNITTYPE_SPECIFIC : {weapon}",
                 ],
             )
-        logger.info(f"Added {len(picked_weapons)} weapons")
 
-        # Step 4 - addons
-        picked_addons = self.noise_generator.select_random_sublist_from_list(
-            AVAILABLE_ADDONS, min_n=1
-        )
+    def _select_random_addons(self) -> None:
+        picked_addons = []
+        for extra_addon in self.map_config.addon_include_list:
+            logger.info(f"Adding extra addon: {extra_addon} as requested by config")
+            if extra_addon in picked_addons or extra_addon not in AVAILABLE_ADDONS:
+                logger.info(f"Addon {extra_addon} skipped")
+                continue
+            picked_addons.append(extra_addon)
         for addon in picked_addons:
             self.ars_file.add_action_to_existing_record(
                 record_name="BUILD_SETUP",
@@ -153,6 +154,18 @@ class ConstructionManager:
                 ],
             )
         logger.info(f"Added {len(picked_addons)} addons")
+
+    def select_random_construction_availability(self) -> None:
+        """Randomly selects available vehicles, buildings and items for construction
+        including soulcatcher chips.
+
+        To avoid making the levels impossible, scarab and pegasus are in every level.
+        Recycler and soulcatcher are in every level, with at least 3 soul catcher chips.
+        """
+        self._select_random_vehicles()
+        self._select_random_soulcatchers()
+        self._select_random_weapons()
+        self._select_random_addons()
 
     def find_weapon_not_in_ars_build(self) -> str:
         """Finds a weapon not in the ARS build order trigger. If all weapons are
