@@ -8,10 +8,12 @@ Contains all info to read and write HWAR's .lev file type
 
 import struct
 from dataclasses import dataclass, field
+from typing import List
+from pathlib import Path
 from src.logger import get_logger
 
 logger = get_logger()
-import os
+
 
 LEV_HEADER_STRUCT = "<LLLLffLLLLLL"
 LEV_TERRAIN_POINT_STRUCT = "<fHHBBBBBBBB"
@@ -106,14 +108,21 @@ class LevFile:
 
     full_file_path: str
     header: _LevHeader = None
-    terrain_points: list[_LevTerrainPoint] = field(default_factory=list)
+    terrain_points: List[_LevTerrainPoint] = field(default_factory=list)
     object_data: bytes = b""
     model_data: bytes = b""
-    colours: list[_Color] = field(default_factory=list)
+    colours: List[_Color] = field(default_factory=list)
     config_data: bytes = b""
 
     def __post_init__(self):
         """Read the specified file and set the internal data"""
+        # Initialize default values
+        self.data = b""
+        
+        if not self.full_file_path or not Path(self.full_file_path).exists():
+            logger.warning(f"LEV file not found or empty path: {self.full_file_path}")
+            return
+            
         logger.info(f"Initializing LEV file from: {self.full_file_path}")
         # get the data
         with open(self.full_file_path, "rb") as f:
@@ -184,7 +193,7 @@ class LevFile:
             save_in_folder (str): Location to save the file to
             file_name (str): Name of the file to save as
         """
-        if not file_name.endswith(".lev"):
+        if not file_name.lower().endswith(".lev"):
             file_name += ".lev"
         logger.info(f"Saving LEV file to: {save_in_folder}/{file_name}")
 
@@ -215,13 +224,12 @@ class LevFile:
         self.header.end_of_last_bit = offset + len(self.config_data)
 
         # Create output path and ensure directory exists
-        output_path = os.path.join(save_in_folder, file_name)
-        os.makedirs(save_in_folder, exist_ok=True)
+        output_path = Path(save_in_folder) / file_name
+        Path(save_in_folder).mkdir(parents=True, exist_ok=True)
 
-        # delete the file if it already exists
-        if os.path.exists(output_path):
-            os.remove(output_path)
-            logger.info(f"Deleted existing file: {output_path}")
+        # Check if file exists
+        if Path(output_path).exists():
+            logger.warning(f"File {output_path} already exists, overwriting")
 
         # open the file in the location
         with open(output_path, "wb") as f:

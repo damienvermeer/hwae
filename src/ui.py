@@ -23,6 +23,7 @@ from tkinter import ttk
 from src.constants import VERSION_STR, PROGRESS_STEPS, NEW_LEVEL_NAME
 from src.generate import generate_new_map
 from src.logger import get_logger
+from src.paths import get_assets_path
 
 logger = get_logger()
 
@@ -48,6 +49,7 @@ class GUI:
         self.generation_in_progress = False
         self.current_progress_step = 0
         self.total_progress_steps = PROGRESS_STEPS
+        self.error_message = ""
 
         # Create UI elements
         content_frame = ttk.Frame(self.main_frame)
@@ -93,9 +95,7 @@ class GUI:
 
         # Add image directly to the right column
         self.image_label = ttk.Label(right_column)
-        img = tk.PhotoImage(
-            file=r"C:\Users\verme\Documents\GitHub\hwae\src\assets\hwar_cover.png"
-        )
+        img = tk.PhotoImage(file=str(get_assets_path() / "hwar_cover.png"))
         self.image_label.config(image=img)
         self.image_label.image = img  # Keep a reference to prevent garbage collection
         self.image_label.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -205,7 +205,7 @@ class GUI:
         self.progress_bar["value"] = 0
 
     def _generate_map_with_exception_handling(self, **kwargs):
-        """Wrapper function for generate_new_map that catches exceptions
+        """Generate map with exception handling
 
         Args:
             **kwargs: Keyword arguments to pass to generate_new_map
@@ -218,17 +218,15 @@ class GUI:
             logger.error(traceback.format_exc())
 
             # Show error message on the main thread
-            self.root.after(0, lambda: self._show_error_and_reset(str(e)))
+            # Use a direct function call instead of a lambda to avoid reference issues
+            self.error_message = str(e)
+            self.root.after(0, self._show_error_and_reset)
 
-    def _show_error_and_reset(self, error_message):
-        """Show error message and reset UI state
-
-        Args:
-            error_message (str): Error message to display
-        """
+    def _show_error_and_reset(self):
+        """Show error message and reset UI state"""
         messagebox.showerror(
             "Map Generation Error",
-            f"An error occurred during map generation:\n\n{error_message}\n\n"
+            f"An error occurred during map generation:\n\n{self.error_message}\n\n"
             f"Check the CSV log file in the level folder for details.",
         )
         # Reset UI state

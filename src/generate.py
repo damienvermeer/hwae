@@ -4,10 +4,14 @@ HWAE (Hostile Waters Antaeus Eternal)
 Python package (released as a pyinstaller exe) to generate additional maps for Hostile Waters: Antaeus Rising (2001)
 """
 
-import pathlib
-import shutil
-from pathlib import Path
 import os
+import sys
+import shutil
+import pathlib
+import random
+import numpy as np
+from pathlib import Path
+import time
 
 from fileio.cfg import CfgFile
 from fileio.lev import LevFile
@@ -26,9 +30,10 @@ from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
 from zones import ZoneManager, ZoneType, ZoneSize, ZoneSubType
-from src.logger import setup_logger, close_logger
-from config_loader import load_config, MapConfig
 from src.constants import NEW_LEVEL_NAME
+from src.paths import get_templates_path, get_textures_path
+from src.logger import setup_logger, get_logger, close_logger
+from config_loader import load_config, MapConfig
 
 
 def generate_new_map(
@@ -70,13 +75,13 @@ def generate_new_map(
 
     # Use map size from config
     map_size_template = "large"  # CURRENTLY NO OTHER SUPPORTED
-    template_root = Path(__file__).resolve().parent / "assets" / "templates"
-    texture_root = Path(__file__).resolve().parent / "assets" / "textures"
+    template_root = get_templates_path()
+    texture_root = get_textures_path()
 
     # STEP 2 - CLEAN EXISTING FILES ----------------------------------------------------
     progress_callback("Cleaning existing files")
     # check if the map folder exists - if so, remove all files in it
-    if os.path.exists(exe_parent / NEW_LEVEL_NAME):
+    if (exe_parent / NEW_LEVEL_NAME).exists():
         shutil.rmtree(exe_parent / NEW_LEVEL_NAME, ignore_errors=True)
 
     # STEP 3 - SET UP COMMON FILES -----------------------------------------------------

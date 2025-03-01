@@ -7,11 +7,11 @@ Contains all info to read and write HWAR's .ail (area/location) file type
 """
 
 from dataclasses import dataclass, field
+from typing import List, Tuple
+from pathlib import Path
 from src.logger import get_logger
 
 logger = get_logger()
-import os
-from typing import List, Tuple
 
 
 @dataclass
@@ -34,7 +34,7 @@ class AilFile:
 
     def __post_init__(self):
         """Read the specified file and set the internal data"""
-        if os.path.exists(self.full_file_path):
+        if self.full_file_path and Path(self.full_file_path).exists():
             with open(self.full_file_path, "r") as f:
                 data = f.read()
 
@@ -162,13 +162,13 @@ class AilFile:
             save_in_folder (str): Location to save the file to
             file_name (str): Name of the file to save as
         """
-        if not file_name.endswith(".ail"):
+        if not file_name.lower().endswith(".ail"):
             file_name += ".ail"
         logger.info(f"Saving AIL file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
-        output_path = os.path.join(save_in_folder, file_name)
-        os.makedirs(save_in_folder, exist_ok=True)
+        output_path = Path(save_in_folder) / file_name
+        Path(save_in_folder).mkdir(parents=True, exist_ok=True)
 
         # Write the file
         with open(output_path, "w") as f:

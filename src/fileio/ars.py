@@ -7,13 +7,12 @@ Contains all info to read and write HWAR's .ars file type (script/triggers)
 """
 
 from dataclasses import dataclass, field
+from typing import List
+from pathlib import Path
 from src.logger import get_logger
 
 logger = get_logger()
-import os
 import re
-from typing import List
-import pathlib
 
 # Regex pattern for trigger header
 TRIGGER_HEADER_PATTERN = re.compile(
@@ -153,7 +152,7 @@ class ArsFile:
         else:
             record.actions.append(_ARSAction(aiscript_type[1], values))
 
-    def load_additional_data(self, file_to_load: pathlib.Path) -> None:
+    def load_additional_data(self, file_to_load: Path) -> None:
         """Loads the record(s) from the specified file into the current object
 
         Args:
@@ -199,16 +198,19 @@ class ArsFile:
 
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Save triggers to file"""
-        if not file_name.endswith(".ars"):
+        if not file_name.lower().endswith(".ars"):
             file_name += ".ars"
+        logger.info(f"Saving ARS file to: {save_in_folder}/{file_name}")
 
-        output_path = os.path.join(save_in_folder, file_name)
-        os.makedirs(save_in_folder, exist_ok=True)
+        # Create output path and ensure directory exists
+        output_path = Path(save_in_folder) / file_name
+        Path(save_in_folder).mkdir(parents=True, exist_ok=True)
 
-        if os.path.exists(output_path):
-            os.remove(output_path)
-            logger.info(f"Replaced existing file: {output_path}")
+        # Check if file exists
+        if Path(output_path).exists():
+            logger.warning(f"File {output_path} already exists, overwriting")
 
+        # Write the file
         with open(output_path, "w") as f:
             f.write("AIRS\n")
             for obj in self.objects:

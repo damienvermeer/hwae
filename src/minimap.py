@@ -8,6 +8,7 @@ import copy
 from pathlib import Path
 import numpy as np
 from src.logger import get_logger
+from src.paths import get_assets_path, get_textures_path
 
 logger = get_logger()
 
@@ -69,7 +70,7 @@ def generate_minimap(
     # load from array
     minimap_img = Image.fromarray(minimap.astype("uint8"))
     # Apply the palette from the template PCX
-    with Image.open(Path(__file__).resolve().parent / "assets" / "map.pcx") as template:
+    with Image.open(get_assets_path() / "map.pcx") as template:
         minimap_img = minimap_img.convert("RGB").quantize(palette=template)
     # mirror the minimap horizontally
     minimap_img = minimap_img.transpose(Image.FLIP_TOP_BOTTOM)
@@ -98,13 +99,7 @@ def get_texture_lookup_list(cfg_interface: CfgFile) -> list:
     for texture in cfg_interface["Land Textures"]:
         # chop off everything after the first space in the line
         texture_fname = texture.split(" ")[0]
-        texture_file_path = (
-            Path(__file__).resolve().parent
-            / "assets"
-            / "textures"
-            / "grass_island"
-            / texture_fname
-        )
+        texture_file_path = get_textures_path() / "grass_island" / texture_fname
         with Image.open(texture_file_path) as img:
             # load all pixels and calculate the average colour
             img = img.convert("RGB")  # Convert to RGB mode

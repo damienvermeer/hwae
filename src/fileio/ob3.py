@@ -9,11 +9,11 @@ Contains all info to read and write HWAR's .ob3 file type
 import struct
 from dataclasses import dataclass, field
 from src.logger import get_logger
-
-logger = get_logger()
-import os
+from pathlib import Path
 import numpy as np
 from typing import List, Union
+
+logger = get_logger()
 
 # NOTE: the 'f' after '12f' should be a bool (1 byte) - but seems to be a
 # ... float in several levels. I'm not even sure what this float/bool is for?
@@ -162,7 +162,7 @@ class Ob3File:
     def __post_init__(self):
         """Load objects from ob3 file if one exists, if path
         is blank then create one from scratch"""
-        if not self.full_file_path:
+        if not self.full_file_path or not Path(self.full_file_path).exists():
             # nothing special requried to create a container ob3 file,
             # ... its just an empty list of objects
             logger.info("OB3: Created empty container")
@@ -253,20 +253,19 @@ class Ob3File:
             file_name (str): Name of the file to save as
         """
         # Ensure file has correct extension
-        if not file_name.endswith(".ob3"):
+        if not file_name.lower().endswith(".ob3"):
             file_name += ".ob3"
         logger.info(f"Saving OB3 file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
-        output_path = os.path.join(save_in_folder, file_name)
-        os.makedirs(save_in_folder, exist_ok=True)
+        output_path = Path(save_in_folder) / file_name
+        Path(save_in_folder).mkdir(parents=True, exist_ok=True)
 
-        # Delete the file if it already exists
-        if os.path.exists(output_path):
-            os.remove(output_path)
-            logger.info(f"Deleted existing file: {output_path}")
+        # Check if file exists
+        if Path(output_path).exists():
+            logger.warning(f"File {output_path} already exists, overwriting")
 
-        # Open the file and write data
+        # Write the file
         with open(output_path, "wb") as f:
             # Write header
             f.write(b"OBJC")  # Magic number

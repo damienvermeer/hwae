@@ -8,6 +8,7 @@ Contains all info regarding terrain for the level
 
 from dataclasses import dataclass
 from src.logger import get_logger
+from src.paths import get_assets_path
 
 logger = get_logger()
 import math
@@ -22,7 +23,6 @@ from src.fileio.lev import LevFile
 from src.fileio.ob3 import MAP_SCALER
 from src.noisegen import NoiseGenerator
 from src.models import ZoneMarker
-import os
 
 
 @dataclass
@@ -130,13 +130,13 @@ class TerrainHandler:
         # Step 2 - load a template map outline, to enforce we get an island
         logger.info("Step 2: Applying island template...")
         # TODO neater
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        mapgen_dir = os.path.join(script_dir, "assets", "mapgen")
-        num_mapgen_templates = len(os.listdir(mapgen_dir))
+        mapgen_dir = get_assets_path() / "mapgen"
+        mapgen_files = list(mapgen_dir.glob("*.png"))
+        num_mapgen_templates = len(mapgen_files)
         # pick a mapgen template at random
         mapgen_template = self.noise_gen.randint(1, num_mapgen_templates - 1)
         logger.info(f"Selected template: {mapgen_template}.png")
-        with Image.open(os.path.join(mapgen_dir, f"{mapgen_template}.png")) as fimg:
+        with Image.open(mapgen_dir / f"{mapgen_template}.png") as fimg:
             # rotate by a random angle
             angle = self.noise_gen.randint(0, 360)
             logger.info(f"Rotating template by {angle} degrees")

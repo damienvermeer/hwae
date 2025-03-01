@@ -8,12 +8,12 @@ Contains functionality for loading and managing map configuration settings
 
 import json
 import os
-import random
-from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Union
+from pathlib import Path
 
 from src.logger import get_logger
+from src.paths import get_assets_path
 
 logger = get_logger()
 
@@ -96,6 +96,6 @@ def load_config(config_path: Union[str, Path] = None) -> MapConfig:
         MapConfig: An instance of MapConfig with values from the JSON file
     """
     if config_path is None:
-        config_path = Path(__file__).resolve().parent / "assets" / "default.json"
+        config_path = get_assets_path() / "default.json"
 
     return MapConfig.from_json(config_path)

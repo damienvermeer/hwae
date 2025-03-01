@@ -1,7 +1,7 @@
 """
 HWAE (Hostile Waters Antaeus Eternal)
 
-logging.py
+logger.py
 
 Custom logger for the HWAE application that logs to both console and a CSV file
 """
@@ -28,14 +28,14 @@ class CsvFormatter(logging.Formatter):
 
 
 class CsvHandler(logging.FileHandler):
-    """Custom handler that writes log records to a CSV file"""
+    """Custom handler for logging to a CSV file"""
 
     def __init__(self, filename, mode="a", encoding=None, delay=False):
         """Initialize the handler with the CSV file"""
         super().__init__(filename, mode, encoding, delay)
 
         # Create CSV file with header if it doesn't exist or is empty
-        if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+        if not Path(filename).exists() or Path(filename).stat().st_size == 0:
             with open(filename, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(["Timestamp", "Level", "Message"])
@@ -70,7 +70,7 @@ def setup_logger(output_path=None):
     # Add CSV handler if output path is provided
     if output_path:
         # Ensure the directory exists
-        os.makedirs(output_path, exist_ok=True)
+        Path(output_path).mkdir(parents=True, exist_ok=True)
 
         # if the logging file exists, remove it (so we get one log)
         logpath = Path(output_path) / "hwae_log.csv"

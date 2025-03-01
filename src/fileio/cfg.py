@@ -6,11 +6,12 @@ fileio.cfg
 Contains all info to read and write HWAR's .cfg file type
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
+from pathlib import Path
 from src.logger import get_logger
 
 logger = get_logger()
-import os
 import time
 
 
@@ -20,22 +21,28 @@ class _CfgRecord:
     just in case HWAR expects a certain CFG section order"""
 
     section: str
-    value: list[str]
+    value: List[str]
 
 
 @dataclass
 class CfgFile:
     """Container for a CFG file"""
 
-    full_file_path: str
+    full_file_path: Path
 
     def __post_init__(self):
         """Read the specified file and set the internal data"""
-        with open(self.full_file_path, "r") as f:
-            data = f.read()
-        # split into lines, then split into section headers and
-        # ... make a dict
         self.records = []
+
+        if self.full_file_path and Path(self.full_file_path).exists():
+            with open(self.full_file_path, "r") as f:
+                data = f.read()
+            # split into lines, then split into section headers and
+            # ... make a dict
+            self._parse_cfg_data(data)
+
+    def _parse_cfg_data(self, data):
+        """Parse the CFG file data"""
         current_record = None
 
         # Parse the data
@@ -60,14 +67,14 @@ class CfgFile:
         if current_record is not None:
             self.records.append(current_record)
 
-    def __getitem__(self, section: str) -> str:
+    def __getitem__(self, section: str) -> List[str]:
         """Gets a section value using dictionary style access
 
         Args:
             section (str): Section name to get
 
         Returns:
-            str: The joined value of the section
+            List[str]: The value of the section
 
         Raises:
             KeyError: If the section doesn't exist
@@ -77,12 +84,12 @@ class CfgFile:
                 return record.value
         raise KeyError(f"Section '{section}' not found")
 
-    def __setitem__(self, section: str, value: str | list[str]) -> None:
+    def __setitem__(self, section: str, value: str | List[str]) -> None:
         """Sets a section value using dictionary style access
 
         Args:
             section (str): Section name to set
-            value (str | list[str]): Value to set. Can be either a string (which will be split into lines if it contains newlines)
+            value (str | List[str]): Value to set. Can be either a string (which will be split into lines if it contains newlines)
                                     or a list of strings.
         """
         # Convert value to list of lines
@@ -123,23 +130,22 @@ class CfgFile:
             return_data += "\n"
         return return_data
 
-    def save(self, save_in_folder: str, file_name: str) -> None:
+    def save(self, save_in_folder: Path, file_name: str) -> None:
         """Saves the CFG file to the specified path, using the data stored
         in this instance
 
         Args:
-            save_in_folder (str): Location to save the file to
+            save_in_folder (Path): Location to save the file to
             file_name (str): Name of the file to save as
         """
-        if not file_name.endswith(".cfg"):
+        if not file_name.lower().endswith(".cfg"):
             file_name += ".cfg"
         logger.info(f"Saving CFG file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
-        output_path = os.path.join(save_in_folder, file_name)
-        os.makedirs(save_in_folder, exist_ok=True)
+        output_path = save_in_folder / file_name
+        save_in_folder.mkdir(parents=True, exist_ok=True)
 
         # Write the file
         with open(output_path, "w") as f:
-            # Add header comment with timestamp
             f.write(self.__str__())

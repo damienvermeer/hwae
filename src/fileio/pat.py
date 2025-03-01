@@ -8,12 +8,12 @@ Contains all info to read and write HWAR's .pat (patrol) file type
 
 from dataclasses import dataclass, field
 from src.logger import get_logger
-
-logger = get_logger()
-import os
+from pathlib import Path
+import re
 import time
 from typing import List, Tuple
 
+logger = get_logger()
 from src.fileio.ob3 import MAP_SCALER
 
 
@@ -42,7 +42,7 @@ class PatFile:
 
     def __post_init__(self):
         """Read the specified file and set the internal data"""
-        if os.path.exists(self.full_file_path):
+        if self.full_file_path and Path(self.full_file_path).exists():
             with open(self.full_file_path, "r") as f:
                 data = f.read()
 
@@ -150,13 +150,13 @@ class PatFile:
             save_in_folder (str): Location to save the file to
             file_name (str): Name of the file to save as
         """
-        if not file_name.endswith(".pat"):
+        if not file_name.lower().endswith(".pat"):
             file_name += ".pat"
         logger.info(f"Saving PAT file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
-        output_path = os.path.join(save_in_folder, file_name)
-        os.makedirs(save_in_folder, exist_ok=True)
+        output_path = Path(save_in_folder) / file_name
+        Path(save_in_folder).mkdir(parents=True, exist_ok=True)
 
         # Write the file
         with open(output_path, "w") as f:
