@@ -72,7 +72,9 @@ class ConstructionManager:
     map_config: MapConfig
 
     def _select_random_vehicles(self) -> None:
-        picked_sublist = []
+        picked_sublist = self.noise_generator.select_random_sublist_from_list(
+            AVAILABLE_VEHCILES, min_n=2
+        )
         for extra_vehicle in self.map_config.vehicle_include_list:
             logger.info(f"Adding extra vehicle: {extra_vehicle} as requested by config")
             if (
@@ -94,7 +96,9 @@ class ConstructionManager:
         logger.info(f"Added {len(picked_sublist)} vehicles")
 
     def _select_random_soulcatchers(self) -> None:
-        picked_soulcatchers = []
+        picked_soulcatchers = self.noise_generator.select_random_sublist_from_list(
+            AVAILABLE_SOULCATCHERS, min_n=6
+        )
         for extra_soulcatcher in self.map_config.soulcatcher_include_list:
             logger.info(
                 f"Adding extra soulcatcher: {extra_soulcatcher} as requested by config"
@@ -118,7 +122,26 @@ class ConstructionManager:
         logger.info(f"Added {len(picked_soulcatchers)} soulcatchers")
 
     def _select_random_weapons(self) -> None:
-        picked_weapons = []
+        picked_weapons = self.noise_generator.select_random_sublist_from_list(
+            [
+                "Minigun",
+                "Missile",
+            ]
+        )
+        non_emp_weapons = [w for w in AVAILABLE_WEAPONS if w != "EMP"]
+        # First pick at least one non-EMP weapon
+        picked_weapons.extend(
+            self.noise_generator.select_random_sublist_from_list(
+                non_emp_weapons, min_n=1, max_n=1
+            )
+        )
+        # Then potentially add more weapons including EMP (at least 1 more)
+        additional_weapons = self.noise_generator.select_random_sublist_from_list(
+            AVAILABLE_WEAPONS, min_n=0
+        )
+        picked_weapons.extend(
+            [w for w in additional_weapons if w not in picked_weapons]
+        )
         for extra_weapon in self.map_config.weapon_include_list:
             logger.info(f"Adding extra weapon: {extra_weapon} as requested by config")
             if extra_weapon in picked_weapons or extra_weapon not in AVAILABLE_WEAPONS:
@@ -137,7 +160,9 @@ class ConstructionManager:
             )
 
     def _select_random_addons(self) -> None:
-        picked_addons = []
+        picked_addons = self.noise_generator.select_random_sublist_from_list(
+            AVAILABLE_ADDONS, min_n=1
+        )
         for extra_addon in self.map_config.addon_include_list:
             logger.info(f"Adding extra addon: {extra_addon} as requested by config")
             if extra_addon in picked_addons or extra_addon not in AVAILABLE_ADDONS:

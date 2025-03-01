@@ -138,12 +138,17 @@ def generate_new_map(
     logger.info("Creating zone manager")
     zone_manager = ZoneManager(object_handler, noise_generator)
 
-    logger.info("Adding scrap zone near carrier")
+    # starting scrap
     xr, zr = zone_manager.add_tiny_scrap_near_carrier_and_calc_rally(carrier_mask)
     logger.info("Adding map revealer")
     object_handler.add_object_centered_on_zone("MapRevealer1", object_handler.zones[0])
     yr = terrain_handler.get_height(xr, zr)
     cfg_data["RallyPoint"] = f"{zr*10*51.7:.6f},{yr:.6f},{xr*10*51.7:.6f}"
+
+    # at least one tiny base
+    zone_manager.generate_random_zones(
+        1, zone_type=ZoneType.BASE, zone_size=ZoneSize.TINY
+    )
 
     # STEP 7 - ZONE (ENEMY) -------------------------------------------------------
     progress_callback("Creating enemy base zones")
@@ -160,7 +165,8 @@ def generate_new_map(
     progress_callback("Creating scrap zones")
     logger.info("Generating additional scrap zones")
     num_scrap_zones = (
-        map_config.num_scrap_zones
+        map_config.num_scrap_zones - 1
+        # ^ take off 1 as we always get at least 1 scrap zone
         if map_config.num_scrap_zones >= 0
         else noise_generator.randint(1, 3)
     )
