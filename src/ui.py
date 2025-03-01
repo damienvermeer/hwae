@@ -8,17 +8,23 @@ Contains the UI for the map generator
 
 # python imports
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, font
+import tkinter.filedialog as filedialog
+import tkinter.messagebox as messagebox
 import threading
-import time
-import pathlib
-
-# pip imports
+import json
+import os
+import sys
+import traceback
+from pathlib import Path
 import sv_ttk
+from tkinter import ttk
 
 # local imports
-from src.constants import VERSION_STR, PROGRESS_STEPS
+from src.constants import VERSION_STR, PROGRESS_STEPS, NEW_LEVEL_NAME
 from src.generate import generate_new_map
+from src.logger import get_logger
+
+logger = get_logger()
 
 
 class GUI:
@@ -116,7 +122,7 @@ class GUI:
 
         if exe_path:
             # Set the hwar_folder to the parent folder of the executable
-            self.hwar_folder = pathlib.Path(exe_path).parent
+            self.hwar_folder = Path(exe_path).parent
 
             # Enable the generation buttons
             self.random_button["state"] = "normal"
@@ -124,13 +130,17 @@ class GUI:
 
     def _select_json_file(self):
         """Open file dialog to select JSON file and start generation"""
-        json_path = filedialog.askopenfilename(
-            title="Select JSON Configuration",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-        )
+        if not self._check_level_exists_and_confirm():
+            # User canceled, reset UI if needed
+            self._reset_ui_after_generation()
+            return
 
-        if json_path:
-            self._start_map_generation(json_path)
+        file_path = filedialog.askopenfilename(
+            title="Select JSON Configuration File",
+            filetypes=[("JSON files", "*.json")],
+        )
+        if file_path:
+            self._start_map_generation(file_path)
 
     def _on_close(self):
         """Handle window close event"""
@@ -146,7 +156,33 @@ class GUI:
 
     def _start_random_generation(self):
         """Start random map generation with default configuration"""
-        self._start_map_generation("")
+        if self._check_level_exists_and_confirm():
+            self._start_map_generation("")  # empty string will use the default config
+        else:
+            # User canceled, reset UI if needed
+            self._reset_ui_after_generation()
+
+    def _check_level_exists_and_confirm(self):
+        """Check if the level folder exists and ask for confirmation to delete it
+
+        Returns:
+            bool: True if the user confirms or the folder doesn't exist, False otherwise
+        """
+        if not self.hwar_folder:
+            return False
+
+        level_path = self.hwar_folder / NEW_LEVEL_NAME
+
+        if level_path.exists():
+            response = messagebox.askyesno(
+                "Level Exists",
+                f"The level folder '{NEW_LEVEL_NAME}' already exists.\n\n"
+                f"Do you want to delete the existing level and create a new one?",
+                icon="warning",
+            )
+            return response
+
+        return True
 
     def flag_as_complete(self):
         """Flag the current generation as complete"""
@@ -168,6 +204,36 @@ class GUI:
         # empty the progress bar
         self.progress_bar["value"] = 0
 
+    def _generate_map_with_exception_handling(self, **kwargs):
+        """Wrapper function for generate_new_map that catches exceptions
+
+        Args:
+            **kwargs: Keyword arguments to pass to generate_new_map
+        """
+        try:
+            generate_new_map(**kwargs)
+        except Exception as e:
+            # Log the exception
+            logger.error(f"Error during map generation: {str(e)}")
+            logger.error(traceback.format_exc())
+
+            # Show error message on the main thread
+            self.root.after(0, lambda: self._show_error_and_reset(str(e)))
+
+    def _show_error_and_reset(self, error_message):
+        """Show error message and reset UI state
+
+        Args:
+            error_message (str): Error message to display
+        """
+        messagebox.showerror(
+            "Map Generation Error",
+            f"An error occurred during map generation:\n\n{error_message}\n\n"
+            f"Check the CSV log file in the level folder for details.",
+        )
+        # Reset UI state
+        self._update_ui_after_completion()
+
     def _start_map_generation(self, config_path):
         """Start map generation with the specified configuration
 
@@ -185,7 +251,7 @@ class GUI:
 
             # Start the generation thread
             generation_thread = threading.Thread(
-                target=generate_new_map,
+                target=self._generate_map_with_exception_handling,
                 kwargs={
                     "progress_callback": self.update_progress_bar_to_next_step,
                     "complete_callback": self.flag_as_complete,
