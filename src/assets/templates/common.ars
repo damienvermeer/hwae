@@ -76,6 +76,17 @@ Action: AIScript_RunAIScript
   AIS_RESPOND_TO_THREATS
 }
 
+Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 6: BOOL_AND
+{
+Condition: AIScript_Always
+Action: AIScript_RunAIScript
+  AIS_REPLACE_VEHICLES
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_ATTACK
+Action: AIScript_RunAIScript
+  AIS_RESPOND_TO_THREATS
+}
+
 
 Trigger: "HWAE carrier death" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
 {
@@ -90,8 +101,9 @@ Action: AIScript_SetCountdownTimer
   8
 Action: AIScript_ChangeMissionObjectives
   1
-  1
+  3
 }
+
 
 Trigger: "HWAE end level" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
 {
@@ -101,6 +113,7 @@ Condition: AIScript_CountdownTimer
   0
 Action: AIScript_EndLevel
 }
+
 
 Trigger: "HWAE patrol 1" :  AIS_SPECIFICPLAYER : 7: BOOL_AND
 {

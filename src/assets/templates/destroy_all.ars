@@ -170,6 +170,9 @@ Condition: AIScript_Command
   AIS_UNITTYPE_SPECIFIC : maggot
 Action: AIScript_Victory
   AIS_CURRENTPLAYER
+Action: AIScript_ChangeMissionObjectives
+  1
+  1
 Action: AIScript_SetCountdownTimer
   1
   8
