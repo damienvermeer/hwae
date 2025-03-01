@@ -18,6 +18,7 @@ import sv_ttk
 
 # local imports
 from src.constants import VERSION_STR, PROGRESS_STEPS
+from src.generate import generate_new_map
 
 
 class GUI:
@@ -164,7 +165,12 @@ class GUI:
 
             # Start the generation thread
             generation_thread = threading.Thread(
-                target=self._generate_map, args=(config_path,)
+                target=generate_new_map,
+                kwargs={
+                    "progress_callback": self.update_progress_bar_to_next_step,
+                    "config_path": config_path,
+                    "exe_parent": self.hwar_folder,
+                },
             )
             generation_thread.daemon = True
             generation_thread.start()

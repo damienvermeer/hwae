@@ -23,7 +23,8 @@ class CsvFormatter(logging.Formatter):
         timestamp = datetime.datetime.fromtimestamp(record.created).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
-        return f"{timestamp},{record.levelname},{record.getMessage()}"
+        recordtxt = record.getMessage().replace(",", ";")
+        return f"{timestamp},{record.levelname},{recordtxt}"
 
 
 class CsvHandler(logging.FileHandler):
