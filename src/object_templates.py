@@ -233,18 +233,22 @@ TEMPLATE_SCRAP_3_OILTANKS = tuple(
             object_type="l2fueltank",
             team=Team.NEUTRAL,
             required_radius=1,
+            y_offset=1.752,
+            y_rotation=90,
         ),
         ObjectContainer(
             object_type="l2fueltank",
             team=Team.NEUTRAL,
             required_radius=1,
             template_x_offset=0.5,
+            y_rotation=90,
         ),
         ObjectContainer(
             object_type="l2fueltank",
             team=Team.NEUTRAL,
             required_radius=1,
             template_x_offset=1,
+            y_rotation=90,
         ),
     ]
 )

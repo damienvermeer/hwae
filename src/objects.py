@@ -574,6 +574,7 @@ class ObjectHandler:
             location=np.array([x, height + ref_object.y_offset, z]),
             attachment_type=ref_object.attachment_type,
             team=team.value if isinstance(team, Team) else team,
+            y_rotation=ref_object.y_rotation,
         )
 
         # START of template repeat (for additional objects defined in this template)
@@ -595,6 +596,7 @@ class ObjectHandler:
                 location=location,
                 attachment_type=obj_dict.attachment_type,
                 team=team.value if isinstance(team, Team) else team,
+                y_rotation=obj_dict.y_rotation,
             )
         logging.info(f"Added {len(object_template)} objects via template")
 
