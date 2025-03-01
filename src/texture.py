@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from src.logger import get_logger
 
 logger = get_logger()
-import noise
 from fileio.cfg import CfgFile
 from fileio.ob3 import MAP_SCALER
 from noisegen import NoiseGenerator
