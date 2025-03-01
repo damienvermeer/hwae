@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import IntEnum, auto
 import numpy as np
 from src.logger import get_logger
+from typing import Union
 
 logger = get_logger()
 
@@ -83,10 +84,10 @@ ALLOWED_MAX_SUBTYPE_ZONES = {
     },
 }
 PUMP_ZONES_PER_BASE_ZONE = {
-    ZoneSize.TINY: [ZoneSize.SMALL],
-    ZoneSize.SMALL: [ZoneSize.SMALL],
+    ZoneSize.TINY: [ZoneSize.TINY],
+    ZoneSize.SMALL: [ZoneSize.TINY],
     ZoneSize.MEDIUM: [ZoneSize.SMALL],
-    ZoneSize.LARGE: [ZoneSize.SMALL, ZoneSize.SMALL],
+    ZoneSize.LARGE: [ZoneSize.SMALL, ZoneSize.TINY],
     ZoneSize.XLARGE: [ZoneSize.SMALL, ZoneSize.SMALL],
 }
 
@@ -99,11 +100,15 @@ class ZoneManager:
     special_zones_allocated = []
     last_used_index = 1
 
-    def generate_random_zones(self, n_zones: int, zone_type: ZoneType) -> None:
+    def generate_random_zones(
+        self, n_zones: int, zone_type: ZoneType, zone_size: Union[None, ZoneSize] = None
+    ) -> None:
         """Generates n_zones based on a random selection based on weighting defined above
 
         Args:
             n_zones (int): Number of zones to generate
+            zone_type (ZoneType): Type of zone to generate
+            zone_size (Union[None, ZoneSize], optional): Size of zone to generate. Defaults to None.
         """
         _zones_to_place = []
         for _ in range(n_zones):
@@ -126,9 +131,13 @@ class ZoneManager:
             # update the allowed max subtype zones to have 1 fewer
             ALLOWED_MAX_SUBTYPE_ZONES[zone_type][zone_subtype] -= 1
             # look up the weighting for the zone sizes and select one
-            zone_size = self.noise_generator.select_random_from_weighted_dict(
-                ALLOWED_ZONE_SIZE_WEIGHTS[zone_type][zone_subtype]
-            )
+            if zone_size is None:
+                zone_size = self.noise_generator.select_random_from_weighted_dict(
+                    ALLOWED_ZONE_SIZE_WEIGHTS[zone_type][zone_subtype]
+                )
+            else:
+                zone_size = zone_size
+
             # add to allocated list
             self.special_zones_allocated.append(zone_subtype)
             # index needs to start at 1, else we can put enemy base on player team
