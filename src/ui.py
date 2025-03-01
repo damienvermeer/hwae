@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import traceback
+import webbrowser
 from pathlib import Path
 import sv_ttk
 from tkinter import ttk
@@ -65,8 +66,20 @@ class GUI:
         right_column.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
         # Add text label above the buttons
-        self.label = ttk.Label(left_column, text=f"Version: {VERSION_STR}")
-        self.label.pack(anchor=tk.W, pady=(0, 5))
+        button_frame = ttk.Frame(left_column)
+        button_frame.pack(fill=tk.X, pady=(0, 5))
+
+        # Version label on the left side of the frame
+        version_label = ttk.Label(button_frame, text=f"Version: {VERSION_STR}")
+        version_label.pack(side=tk.LEFT)
+
+        # GitHub button on the right side of the frame
+        self.github_button = ttk.Button(
+            button_frame,
+            text="Issues?",
+            command=self._open_github,
+        )
+        self.github_button.pack(side=tk.RIGHT)
 
         # Select HWAR executable button
         self.select_exe_button = ttk.Button(
@@ -290,6 +303,10 @@ class GUI:
         self.random_button["state"] = "normal"
         self.json_button["state"] = "normal"
         self.status_label.config(text="")
+
+    def _open_github(self):
+        """Open the GitHub repository in the default web browser"""
+        webbrowser.open("https://github.com/hwar-speed/hwae/issues/new")
 
     def run(self):
         """Run the UI main loop"""
