@@ -14,11 +14,20 @@ from perlin_numpy import generate_fractal_noise_2d
 
 @dataclass
 class NoiseGenerator:
-    seed: int
+    seed: int = 0
 
     def __post_init__(self):
-        random.seed(self.seed)
-        np.random.seed(self.seed)
+        if self.seed:
+            random.seed(self.seed)
+            np.random.seed(self.seed)
+        else:
+            self.seed = int(np.random.rand() * (2**32 - 1))
+            random.seed(self.seed)
+            np.random.seed(self.seed)
+
+    def get_seed(self):
+        # get the current seed form numpy
+        return self.seed
 
     def randint(self, min, max):
         return np.random.randint(min, max)
