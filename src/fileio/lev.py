@@ -10,7 +10,7 @@ import struct
 from dataclasses import dataclass, field
 from typing import List
 from pathlib import Path
-from src.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 
@@ -118,11 +118,11 @@ class LevFile:
         """Read the specified file and set the internal data"""
         # Initialize default values
         self.data = b""
-        
+
         if not self.full_file_path or not Path(self.full_file_path).exists():
             logger.warning(f"LEV file not found or empty path: {self.full_file_path}")
             return
-            
+
         logger.info(f"Initializing LEV file from: {self.full_file_path}")
         # get the data
         with open(self.full_file_path, "rb") as f:

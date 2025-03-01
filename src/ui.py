@@ -20,10 +20,10 @@ import sv_ttk
 from tkinter import ttk
 
 # local imports
-from src.constants import VERSION_STR, PROGRESS_STEPS, NEW_LEVEL_NAME
-from src.generate import generate_new_map
-from src.logger import get_logger
-from src.paths import get_assets_path
+from constants import VERSION_STR, PROGRESS_STEPS, NEW_LEVEL_NAME
+from generate import generate_new_map
+from logger import get_logger
+from paths import get_assets_path
 
 logger = get_logger()
 

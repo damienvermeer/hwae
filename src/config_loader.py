@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 from typing import List, Union
 from pathlib import Path
 
-from src.logger import get_logger
-from src.paths import get_assets_path
+from logger import get_logger
+from paths import get_assets_path
 
 logger = get_logger()
 

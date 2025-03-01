@@ -9,7 +9,7 @@ Contains all info to read and write HWAR's .ars file type (script/triggers)
 from dataclasses import dataclass, field
 from typing import List
 from pathlib import Path
-from src.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 import re

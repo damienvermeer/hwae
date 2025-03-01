@@ -2,11 +2,19 @@
 Tests for the Construction Manager
 """
 
+import os
+import sys
 import pytest
-from src.construction import ConstructionManager, AVAILABLE_WEAPONS
-from src.fileio.ars import ArsFile, _ARSRecord
-from src.noisegen import NoiseGenerator
+from construction import ConstructionManager, AVAILABLE_WEAPONS
+from fileio.ars import ArsFile, _ARSRecord
+from noisegen import NoiseGenerator
 from pathlib import Path
+
+# Add the src directory to the Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(os.path.dirname(current_dir), 'src')
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
 
 
 def test_find_weapon_not_in_ars_build():

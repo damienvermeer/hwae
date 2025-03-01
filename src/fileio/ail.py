@@ -9,7 +9,7 @@ Contains all info to read and write HWAR's .ail (area/location) file type
 from dataclasses import dataclass, field
 from typing import List, Tuple
 from pathlib import Path
-from src.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 

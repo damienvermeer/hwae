@@ -7,8 +7,8 @@ from fileio.cfg import CfgFile
 import copy
 from pathlib import Path
 import numpy as np
-from src.logger import get_logger
-from src.paths import get_assets_path, get_textures_path
+from logger import get_logger
+from paths import get_assets_path, get_textures_path
 
 logger = get_logger()
 

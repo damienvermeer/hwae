@@ -7,7 +7,7 @@ Handles selecting and copying textures
 """
 
 from dataclasses import dataclass
-from src.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 from fileio.cfg import CfgFile

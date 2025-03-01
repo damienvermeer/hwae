@@ -6,16 +6,16 @@ construction.py
 Contains all info to set the .ars file based on the selected construction options
 """
 
-from src.noisegen import NoiseGenerator
-from src.fileio.ars import ArsFile
+from noisegen import NoiseGenerator
+from fileio.ars import ArsFile
 from dataclasses import dataclass
-from src.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 import os
 import time
 import copy
-from src.config_loader import MapConfig
+from config_loader import MapConfig
 
 
 AVAILABLE_VEHCILES = [

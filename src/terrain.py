@@ -7,8 +7,8 @@ Contains all info regarding terrain for the level
 """
 
 from dataclasses import dataclass
-from src.logger import get_logger
-from src.paths import get_assets_path
+from logger import get_logger
+from paths import get_assets_path
 
 logger = get_logger()
 import math
@@ -19,10 +19,10 @@ from typing import Any, Optional
 from PIL import Image
 import numpy as np
 
-from src.fileio.lev import LevFile
-from src.fileio.ob3 import MAP_SCALER
-from src.noisegen import NoiseGenerator
-from src.models import ZoneMarker
+from fileio.lev import LevFile
+from fileio.ob3 import MAP_SCALER
+from noisegen import NoiseGenerator
+from models import ZoneMarker
 
 
 @dataclass

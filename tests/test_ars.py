@@ -3,9 +3,18 @@ Tests for the ARS file parser
 """
 
 import os
+import sys
 import pytest
 import re
-from src.fileio.ars import ArsFile
+from pathlib import Path
+
+# Add the src directory to the Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(os.path.dirname(current_dir), 'src')
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+from fileio.ars import ArsFile
 from tempfile import NamedTemporaryFile
 
 

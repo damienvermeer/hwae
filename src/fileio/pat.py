@@ -7,14 +7,14 @@ Contains all info to read and write HWAR's .pat (patrol) file type
 """
 
 from dataclasses import dataclass, field
-from src.logger import get_logger
+from logger import get_logger
 from pathlib import Path
 import re
 import time
 from typing import List, Tuple
 
 logger = get_logger()
-from src.fileio.ob3 import MAP_SCALER
+from fileio.ob3 import MAP_SCALER
 
 
 @dataclass

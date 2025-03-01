@@ -6,7 +6,7 @@ src.objects
 Contains all info regarding objects for the level
 """
 
-from src.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 
@@ -20,9 +20,9 @@ from typing import Optional, Union
 
 import numpy as np
 
-from src.fileio.ob3 import Ob3File, MAP_SCALER
-from src.noisegen import NoiseGenerator
-from src.models import (
+from fileio.ob3 import Ob3File, MAP_SCALER
+from noisegen import NoiseGenerator
+from models import (
     Team,
     ZoneType,
     ZoneSize,
@@ -31,7 +31,7 @@ from src.models import (
     ZoneSubType,
     ZONE_SIZE_TO_NUM_OBJECTS,
 )
-from src.terrain import TerrainHandler
+from terrain import TerrainHandler
 
 # Import object containers after all other imports to prevent circular dependencies
 from object_containers import (
@@ -46,12 +46,10 @@ from object_containers import (
     SCRAP_FUEL_TANKS,
     WEAPON_CRATE_SCRAP_PRIORITY,
     WEAPON_CRATE_SCRAP_OTHERS,
-)
-from object_templates import (
     TEMPLATE_ALIEN_AA,
     TEMPLATE_ALIEN_RADAR,
 )
-from tests.test_noisegen import noise_generator
+from noisegen import NoiseGenerator
 
 
 class LocationEnum(IntEnum):

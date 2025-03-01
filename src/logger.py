@@ -12,7 +12,7 @@ import os
 import datetime
 from pathlib import Path
 
-from src.constants import LOGGER_NAME
+from constants import LOGGER_NAME
 
 
 class CsvFormatter(logging.Formatter):

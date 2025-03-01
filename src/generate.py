@@ -20,7 +20,6 @@ from fileio.ars import ArsFile
 from fileio.pat import PatFile
 from fileio.ail import AilFile
 from fileio.ait import AitFile
-import src.object_templates as ot
 
 from construction import ConstructionManager
 from noisegen import NoiseGenerator
@@ -30,9 +29,9 @@ from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
 from zones import ZoneManager, ZoneType, ZoneSize, ZoneSubType
-from src.constants import NEW_LEVEL_NAME
-from src.paths import get_templates_path, get_textures_path
-from src.logger import setup_logger, get_logger, close_logger
+from constants import NEW_LEVEL_NAME
+from paths import get_templates_path, get_textures_path
+from logger import setup_logger, get_logger, close_logger
 from config_loader import load_config, MapConfig
 
 

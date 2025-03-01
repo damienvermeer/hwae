@@ -3,8 +3,17 @@ Tests for the CFG file parser
 """
 
 import os
+import sys
 import pytest
-from src.fileio.cfg import CfgFile
+from pathlib import Path
+
+# Add the src directory to the Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(os.path.dirname(current_dir), 'src')
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+from fileio.cfg import CfgFile
 from tempfile import NamedTemporaryFile
 
 

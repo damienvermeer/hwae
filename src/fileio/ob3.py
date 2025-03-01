@@ -8,7 +8,7 @@ Contains all info to read and write HWAR's .ob3 file type
 
 import struct
 from dataclasses import dataclass, field
-from src.logger import get_logger
+from logger import get_logger
 from pathlib import Path
 import numpy as np
 from typing import List, Union

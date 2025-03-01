@@ -9,15 +9,15 @@ Contains all info regarding objects for the level
 from dataclasses import dataclass
 from enum import IntEnum, auto
 import numpy as np
-from src.logger import get_logger
+from logger import get_logger
 from typing import Union
 
 logger = get_logger()
 
-from src.fileio.ob3 import Ob3File, MAP_SCALER
-from src.noisegen import NoiseGenerator
-from src.objects import ObjectHandler
-from src.models import ZoneMarker, ZoneSubType, ZoneSize, ZoneType, ZONE_SIZE_TO_RADIUS
+from fileio.ob3 import Ob3File, MAP_SCALER
+from noisegen import NoiseGenerator
+from objects import ObjectHandler
+from models import ZoneMarker, ZoneSubType, ZoneSize, ZoneType, ZONE_SIZE_TO_RADIUS
 
 ZONE_TYPE_WEIGHTS = {
     ZoneType.BASE: 1,
