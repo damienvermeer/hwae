@@ -9,8 +9,10 @@ Action: AIScript_PlaySound
   "1617"
 Action: AIScript_SetMissionObjectives
   2
-  "Sample weapon crate"
+  "hwae_weapon_crate__sample_crate"
 Action: AIScript_DisplayMissionObjectives
+Action: AIScript_ShowSampler
+  1
 }
 
 Trigger: "HWAE_zone_specific sample crate for weapon" :  AIS_SPECIFICPLAYER : 0: BOOL_AND
@@ -25,9 +27,12 @@ Action: AIScript_SetCountdownTimer
   30
 Action: AIScript_StartDisplayCountdown
   9
-  "Analysis complete in:"
+  "hwae_weapon_crate__weapon_ready_in"
 Action: AIScript_ShowSampler
   0
+Action: AIScript_ChangeMissionObjectives
+  2
+  1
 }
 
 Trigger: "HWAE_zone_specific weapon ready" :  AIS_SPECIFICPLAYER : 0: BOOL_AND

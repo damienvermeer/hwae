@@ -16,6 +16,9 @@ Action: AIScript_MakeAvailableForBuilding
 Action: AIScript_MakeAvailableForBuilding
   AIS_SPECIFICPLAYER : 0
   AIS_UNITTYPE_SPECIFIC : soulunit
+Action: AIScript_SetMissionObjectives
+  1
+  "hwae_default_objective"
 }
 
 Trigger: "HWAE common run AI" :  AIS_SPECIFICPLAYER : 1: BOOL_AND
@@ -85,6 +88,9 @@ Action: AIScript_PlaySound
 Action: AIScript_SetCountdownTimer
   1
   8
+Action: AIScript_ChangeMissionObjectives
+  1
+  1
 }
 
 Trigger: "HWAE end level" :  AIS_SPECIFICPLAYER : 0: BOOL_AND

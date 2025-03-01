@@ -5,6 +5,7 @@ Python package (released as a pyinstaller exe) to generate additional maps for H
 """
 
 import logging
+import pathlib
 import shutil
 from pathlib import Path
 import os
@@ -15,6 +16,7 @@ from fileio.ob3 import Ob3File
 from fileio.ars import ArsFile
 from fileio.pat import PatFile
 from fileio.ail import AilFile
+from fileio.ait import AitFile
 import src.object_templates as ot
 
 from construction import ConstructionManager
@@ -47,6 +49,7 @@ def main():
     cfg_data = CfgFile(template_root / f"{map_size_template}.cfg")
     lev_data = LevFile(template_root / f"{map_size_template}.lev")
     ars_data = ArsFile(template_root / "common.ars")
+    ait_data = AitFile(template_root / "common.ait")
     ob3_data = Ob3File("")  # no template ob3 required
     pat_data = PatFile("")  # no template pat required
     ail_data = AilFile("")  # no template ail required
@@ -158,6 +161,11 @@ def main():
         ars_data.load_additional_data(
             template_root / "zone_specific" / "weapon_crate.ars"
         )
+        # update ait so we dont get unlinked text
+        ait_data.add_text_record(
+            name="hwae_weapon_crate__sample_crate",
+            content="Sample the weapon crate",
+        )
         spare_weapon = construction_manager.find_weapon_not_in_ars_build()
         if spare_weapon is not None:
             ars_data.add_action_to_existing_record(
@@ -174,16 +182,24 @@ def main():
             name="near_crate_zone",
             bounding_box=(zone_z - 30, zone_x - 30, zone_z + 30, zone_x + 30),
         )
+        # update ait so we dont get unlinked text
+        ait_data.add_text_record(
+            name="hwae_weapon_crate__weapon_ready_in",
+            content=f"New weapon ({spare_weapon}) ready in:",
+        )
     # set carrier shells
     ars_data.add_action_to_existing_record(
         record_name="HWAE set carrier shells",
         action_title="AIScript_SetCarrierShells",
         action_details=[str(noise_generator.randint(1, 4))],
     )
-
     # STEP 7 - SAVE ALL FILES TO OUTPUT LOCATION
     for file in [lev_data, cfg_data, ob3_data, ars_data, pat_data, ail_data]:
         file.save(OUTPUT_PATH / NEW_LEVEL_NAME, NEW_LEVEL_NAME)
+    # save ait in special place
+    ait_path = pathlib.Path(OUTPUT_PATH / "Text" / "English")
+    ait_path.mkdir(parents=True, exist_ok=True)
+    ait_data.save(ait_path, NEW_LEVEL_NAME)
 
     # STEP xxx - delete any .aim file in the new level directory (force rebuild)
     for aim_file in (OUTPUT_PATH / NEW_LEVEL_NAME).glob("*.aim"):
