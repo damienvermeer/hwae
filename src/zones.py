@@ -209,7 +209,7 @@ class ZoneManager:
             logger.warning("Failed to add tiny scrap zone near carrier")
             return
 
-        # create a custom mask within a radius of 9 of the new scrap zone
+        # create a custom mask within a radius of 15 of the new scrap zone
         nearby_scrap_mask = self.object_handler._update_mask_grid_with_radius(
             np.zeros_like(carrier_mask),
             radius=15,
@@ -219,7 +219,7 @@ class ZoneManager:
         )
         # find a location
         x, z = self.object_handler._find_location(
-            required_radius=3,
+            required_radius=4,
             consider_zones=True,
             extra_masks=nearby_scrap_mask,
         )
