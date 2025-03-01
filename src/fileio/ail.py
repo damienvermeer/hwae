@@ -7,7 +7,9 @@ Contains all info to read and write HWAR's .ail (area/location) file type
 """
 
 from dataclasses import dataclass, field
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 from typing import List, Tuple
 
@@ -78,11 +80,11 @@ class AilFile:
                             coords[3],
                         )
                     else:
-                        logging.warning(
+                        logger.warning(
                             f"Invalid bounding box format in line {line_count}: {line}"
                         )
                 except ValueError:
-                    logging.warning(
+                    logger.warning(
                         f"Invalid bounding box format in line {line_count}: {line}"
                     )
                 section_line_count += 1
@@ -162,7 +164,7 @@ class AilFile:
         """
         if not file_name.endswith(".ail"):
             file_name += ".ail"
-        logging.info(f"Saving AIL file to: {save_in_folder}/{file_name}")
+        logger.info(f"Saving AIL file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
         output_path = os.path.join(save_in_folder, file_name)

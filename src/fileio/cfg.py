@@ -6,9 +6,10 @@ fileio.cfg
 Contains all info to read and write HWAR's .cfg file type
 """
 
-import struct
 from dataclasses import dataclass
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 import time
 
@@ -91,7 +92,7 @@ class CfgFile:
             value_lines = value
         else:
             value_lines = [str(value)]
-            
+
         # remove comment lines
         value_lines = [line for line in value_lines if not line.strip().startswith(";")]
 
@@ -132,7 +133,7 @@ class CfgFile:
         """
         if not file_name.endswith(".cfg"):
             file_name += ".cfg"
-        logging.info(f"Saving CFG file to: {save_in_folder}/{file_name}")
+        logger.info(f"Saving CFG file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
         output_path = os.path.join(save_in_folder, file_name)

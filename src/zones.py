@@ -9,7 +9,9 @@ Contains all info regarding objects for the level
 from dataclasses import dataclass
 from enum import IntEnum, auto
 import numpy as np
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 
 from src.fileio.ob3 import Ob3File, MAP_SCALER
 from src.noisegen import NoiseGenerator
@@ -152,7 +154,7 @@ class ZoneManager:
         ]:
             zone = self.object_handler.add_zone(*zone_to_add)
             if zone is None:
-                logging.warning(f"Failed to add zone {zone_to_add}")
+                logger.warning(f"Failed to add zone {zone_to_add}")
 
         # now they've been added, add the linked pump zones
         for zone_to_add in [
@@ -163,7 +165,7 @@ class ZoneManager:
                 x for x in self.object_handler.zones if x.zone_index == zone_to_add[3]
             ]
             if not base_zones:
-                logging.warning(f"No base zone found with index {zone_to_add[3]}")
+                logger.warning(f"No base zone found with index {zone_to_add[3]}")
                 continue
 
             base_zone = base_zones[0]
@@ -177,7 +179,7 @@ class ZoneManager:
                 extra_zone_spacing=20,  # try reduced spacing
             )
             if zone is None:
-                logging.warning(
+                logger.warning(
                     f"Failed to add pump zone {zone_to_add} near base zone {base_zone}"
                 )
 
@@ -189,7 +191,7 @@ class ZoneManager:
         Args:
             carrier_mask (np.ndarray): Mask of the carrier
         """
-        logging.info("Adding tiny scrap zone near carrier")
+        logger.info("Adding tiny scrap zone near carrier")
         # pick a zone subtype at random from ALLOWED_ZONE_SUBTYPES[ZoneType.SCRAP]
         zone_subtype = self.noise_generator.select_random_from_weighted_dict(
             ZONE_SUBTYPE_WEIGHTS[ZoneType.SCRAP]
@@ -204,7 +206,7 @@ class ZoneManager:
         )
 
         if zone is None:
-            logging.warning("Failed to add tiny scrap zone near carrier")
+            logger.warning("Failed to add tiny scrap zone near carrier")
             return
 
         # create a custom mask within a radius of 9 of the new scrap zone

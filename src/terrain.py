@@ -7,7 +7,9 @@ Contains all info regarding terrain for the level
 """
 
 from dataclasses import dataclass
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import math
 from enum import IntEnum, auto
 from pathlib import Path
@@ -115,10 +117,10 @@ class TerrainHandler:
         simple implementation, where the height is the value of the noise at the
         corresponding position.
         """
-        logging.info("Starting terrain generation...")
+        logger.info("Starting terrain generation...")
 
         # Step 1 - generate a base map
-        logging.info("Step 1: Generating base noise map...")
+        logger.info("Step 1: Generating base noise map...")
         # generate a base noise map with the same dimensions as the map
         noise_map = self.noise_gen.random_noisemap(self.width, self.length, cutoff=0.3)
         for x in range(self.width):
@@ -126,18 +128,18 @@ class TerrainHandler:
                 self.terrain_points[x, y].height = noise_map[x, y]
 
         # Step 2 - load a template map outline, to enforce we get an island
-        logging.info("Step 2: Applying island template...")
+        logger.info("Step 2: Applying island template...")
         # TODO neater
         script_dir = os.path.dirname(os.path.abspath(__file__))
         mapgen_dir = os.path.join(script_dir, "assets", "mapgen")
         num_mapgen_templates = len(os.listdir(mapgen_dir))
         # pick a mapgen template at random
         mapgen_template = self.noise_gen.randint(1, num_mapgen_templates - 1)
-        logging.info(f"Selected template: {mapgen_template}.png")
+        logger.info(f"Selected template: {mapgen_template}.png")
         with Image.open(os.path.join(mapgen_dir, f"{mapgen_template}.png")) as fimg:
             # rotate by a random angle
             angle = self.noise_gen.randint(0, 360)
-            logging.info(f"Rotating template by {angle} degrees")
+            logger.info(f"Rotating template by {angle} degrees")
             img = fimg.rotate(angle, Image.NEAREST, expand=True)
             # normlaise to [0,1]
             img = img.convert("L")
@@ -151,18 +153,18 @@ class TerrainHandler:
                     self.terrain_points[x, y].height *= img[x, y]
 
         # Step 3 - scale the terrain based on testing
-        logging.info("Step 3: Scaling terrain heights...")
+        logger.info("Step 3: Scaling terrain heights...")
         self.terrain_points = self._scale_array(self.terrain_points, -1000, 3200)
 
         # Step 4 - apply final cutoff (to remove underwater height changes)
-        logging.info("Step 4: Applying underwater height cutoff...")
+        logger.info("Step 4: Applying underwater height cutoff...")
         for x in range(self.width):
             for y in range(self.length):
                 if self.terrain_points[x, y].height < -150:
                     self.terrain_points[x, y].height = -1500
 
         # Step 5 - remove holes from appearing in the map by setting the flags
-        logging.info("Step 5: Setting terrain flags...")
+        logger.info("Step 5: Setting terrain flags...")
         # ... of every point to 1
         for x in range(self.width):
             for y in range(self.length):
@@ -171,14 +173,12 @@ class TerrainHandler:
                 self.terrain_points[x, y].texture_dir = self.noise_gen.randint(0, 8)
 
         # Step 6 - apply random map textures
-        logging.info("Step 6: Applying terrain textures...")
+        logger.info("Step 6: Applying terrain textures...")
         # 1 sea, 1 shore, 5 normal, 1 hill, 1 peak
         # Step 6a - get a noisemap we will use for the variety in textures, with more
         # ... noise in it. scale the map between 0 and 4 (integers only)
         N = 5  # number of 'normal textures'
-        noise_map = self.noise_gen.random_noisemap(
-            self.width, self.length
-        )
+        noise_map = self.noise_gen.random_noisemap(self.width, self.length)
         # Map noise values (0-1) to texture indices (0-N) with decreasing frequency
         # Create thresholds that give exponentially less space to higher values
         thresholds = np.array(
@@ -188,13 +188,13 @@ class TerrainHandler:
 
         # Step 6b - apply the noisemap to the terrain (the terrain_points) with
         # ... an offset to cover the sea and shore
-        logging.info("Applying base terrain textures...")
+        logger.info("Applying base terrain textures...")
         for x in range(self.width):
             for y in range(self.length):
                 self.terrain_points[x, y].mat = noise_map[x, y] + 2
 
         # Step 6c - apply height-bound materials (sea, shore)
-        logging.info("Applying height-based terrain textures...")
+        logger.info("Applying height-based terrain textures...")
         max_height = self.get_max_height()
         for x in range(self.width):
             for y in range(self.length):
@@ -208,7 +208,7 @@ class TerrainHandler:
                 elif self.terrain_points[x, y].height > 0.9 * max_height:
                     self.terrain_points[x, y].mat = 6  # peaks
 
-        logging.info("Terrain generation complete!")
+        logger.info("Terrain generation complete!")
 
     def apply_texture_based_on_zone(self, zone: ZoneMarker) -> None:
         """Applies the texture with texture_id in the radius defined by the zone
@@ -219,7 +219,7 @@ class TerrainHandler:
         """
         # first select all the terrain points which are within a radius of the zone
         # ... location
-        logging.info("Applying zone texture: Selecting terrain points within radius")
+        logger.info("Applying zone texture: Selecting terrain points within radius")
         for x in range(self.width):
             for y in range(self.length):
                 if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
@@ -228,7 +228,7 @@ class TerrainHandler:
                         [0] * 5 + [1] + [2]
                     )
                     self.terrain_points[x, y].mat = zone.texture_id + texture_offset
-        logging.info("Applying zone texture: Completed")
+        logger.info("Applying zone texture: Completed")
 
     def flatten_terrain_based_on_zone(self, zone: ZoneMarker) -> None:
         """Flattens the terrain based on the zone radius
@@ -237,7 +237,7 @@ class TerrainHandler:
             zone (ZoneMarker): Zone object defining the radius
         """
         # find the average height of the terrain within the zone
-        logging.info("Zone: Flattening terrain: Finding average height")
+        logger.info("Zone: Flattening terrain: Finding average height")
         avg_height = 0
         count = 0
         for x in range(self.width):
@@ -248,7 +248,7 @@ class TerrainHandler:
         avg_height /= count
         # set min height - to avoid spawning things in water
         avg_height = max(avg_height, 60)
-        logging.info("Zone: Flattening terrain: Found average height")
+        logger.info("Zone: Flattening terrain: Found average height")
         # set the height of all points within the zone to the average height
         for x in range(self.width):
             for y in range(self.length):
@@ -266,7 +266,7 @@ class TerrainHandler:
                     self.terrain_points[x, y].height = np.mean(
                         [self.terrain_points[x, y].height, avg_height]
                     )
-        logging.info("Zone: Flattening terrain: Completed")
+        logger.info("Zone: Flattening terrain: Completed")
 
     # def _generate_upscaled_height_array(
     #     self, scale: int = 10
@@ -285,12 +285,12 @@ class TerrainHandler:
     #     """
     #     # Get original height array
     #     height_array = self._get_height_2d_array()
-    #     logging.info("Terrain upscale: Got original height array")
+    #     logger.info("Terrain upscale: Got original height array")
 
     #     # Create coordinate arrays for output
     #     x = np.linspace(0, self.width - 1, self.width * scale)
     #     z = np.linspace(0, self.length - 1, self.length * scale)
-    #     logging.info("Terrain upscale: Created coordinate arrays")
+    #     logger.info("Terrain upscale: Created coordinate arrays")
 
     #     # Get integer and fractional parts
     #     x0 = x.astype(np.int32)
@@ -299,20 +299,20 @@ class TerrainHandler:
     #     z1 = np.minimum(z0 + 1, self.length - 1)
     #     xf = x - x0
     #     zf = z - z0
-    #     logging.info("Terrain upscale: Computed integer and fractional parts")
+    #     logger.info("Terrain upscale: Computed integer and fractional parts")
 
     #     # Create meshgrids for vectorized computation
     #     XF, ZF = np.meshgrid(xf, zf, indexing="ij")
     #     X0, Z0 = np.meshgrid(x0, z0, indexing="ij")
     #     X1, Z1 = np.meshgrid(x1, z1, indexing="ij")
-    #     logging.info("Terrain upscale: Created meshgrids")
+    #     logger.info("Terrain upscale: Created meshgrids")
 
     #     # Get corner values using advanced indexing
     #     v00 = height_array[X0, Z0]
     #     v01 = height_array[X0, Z1]
     #     v10 = height_array[X1, Z0]
     #     v11 = height_array[X1, Z1]
-    #     logging.info("Got corner values")
+    #     logger.info("Got corner values")
 
     #     # Vectorized bilinear interpolation
     #     result = (
@@ -321,7 +321,7 @@ class TerrainHandler:
     #         + v10 * XF * (1 - ZF)
     #         + v11 * XF * ZF
     #     )
-    #     logging.info("Terrain upscale: Completed bilinear interpolation")
+    #     logger.info("Terrain upscale: Completed bilinear interpolation")
 
     #     # Handle exact integer positions
     #     exact_x = XF == 0
@@ -330,5 +330,5 @@ class TerrainHandler:
     #     if np.any(exact_points):
     #         result[exact_points] = height_array[X0[exact_points], Z0[exact_points]]
 
-    #     logging.info("Terrain upscale: Completed height array upscaling")
+    #     logger.info("Terrain upscale: Completed height array upscaling")
     #     return result, self.width * scale, self.length * scale

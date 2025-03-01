@@ -8,7 +8,9 @@ Contains all info to read and write HWAR's .ob3 file type
 
 import struct
 from dataclasses import dataclass, field
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 import numpy as np
 from typing import List, Union
@@ -163,7 +165,7 @@ class Ob3File:
         if not self.full_file_path:
             # nothing special requried to create a container ob3 file,
             # ... its just an empty list of objects
-            logging.info("OB3: Created empty container")
+            logger.info("OB3: Created empty container")
             return
 
         with open(self.full_file_path, "rb") as f:
@@ -172,7 +174,7 @@ class Ob3File:
 
             # Read number of objects
             num_objects = struct.unpack("<I", f.read(4))[0]
-            logging.info(f"OB3 Read: Expecting {num_objects} objects")
+            logger.info(f"OB3 Read: Expecting {num_objects} objects")
 
             # start reading objects
             for object_id in range(num_objects):
@@ -194,7 +196,7 @@ class Ob3File:
                 )
                 # and add the object
                 self.objects.append(_OB3Object(*all_args))
-            logging.info(
+            logger.info(
                 f"OB3 Read: Finished reading - found {len(self.objects)} objects"
             )
 
@@ -240,9 +242,7 @@ class Ob3File:
         # call clean object (to set location values etc)
         new_obj.clean_object()
         self.objects.append(new_obj)
-        logging.info(
-            f"Added new object of type '{object_type}' with ID {new_obj.my_id}"
-        )
+        logger.info(f"Added new object of type '{object_type}' with ID {new_obj.my_id}")
         return new_obj.my_id
 
     def save(self, save_in_folder: str, file_name: str) -> None:
@@ -255,7 +255,7 @@ class Ob3File:
         # Ensure file has correct extension
         if not file_name.endswith(".ob3"):
             file_name += ".ob3"
-        logging.info(f"Saving OB3 file to: {save_in_folder}/{file_name}")
+        logger.info(f"Saving OB3 file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
         output_path = os.path.join(save_in_folder, file_name)
@@ -264,19 +264,19 @@ class Ob3File:
         # Delete the file if it already exists
         if os.path.exists(output_path):
             os.remove(output_path)
-            logging.info(f"Deleted existing file: {output_path}")
+            logger.info(f"Deleted existing file: {output_path}")
 
         # Open the file and write data
         with open(output_path, "wb") as f:
             # Write header
             f.write(b"OBJC")  # Magic number
             f.write(struct.pack("<I", len(self.objects)))  # Number of entries
-            logging.info(f"Wrote header with {len(self.objects)} objects")
+            logger.info(f"Wrote header with {len(self.objects)} objects")
 
             # Write each object
             for obj in self.objects:
                 f.write(obj.pack())
 
-            logging.info(f"Successfully wrote {len(self.objects)} objects")
+            logger.info(f"Successfully wrote {len(self.objects)} objects")
 
-        logging.info(f"Successfully saved OB3 file to: {output_path}")
+        logger.info(f"Successfully saved OB3 file to: {output_path}")

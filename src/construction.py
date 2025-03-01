@@ -9,7 +9,9 @@ Contains all info to set the .ars file based on the selected construction option
 from src.noisegen import NoiseGenerator
 from src.fileio.ars import ArsFile
 from dataclasses import dataclass
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 import time
 import copy
@@ -88,7 +90,7 @@ class ConstructionManager:
                     f"AIS_UNITTYPE_SPECIFIC : {vehicle}",
                 ],
             )
-        logging.info(f"Added {len(picked_sublist)} vehicles")
+        logger.info(f"Added {len(picked_sublist)} vehicles")
 
         # Step 2 - soulcatchers (ensure at least 6 for balance)
         picked_soulcatchers = self.noise_generator.select_random_sublist_from_list(
@@ -103,7 +105,7 @@ class ConstructionManager:
                     f"AIS_UNITTYPE_SPECIFIC : {soulcatcher}",
                 ],
             )
-        logging.info(f"Added {len(picked_soulcatchers)} soulcatchers")
+        logger.info(f"Added {len(picked_soulcatchers)} soulcatchers")
 
         # Step 3 - weapons (ensure either longbow or minigun always - for balance)
         picked_weapons = self.noise_generator.select_random_sublist_from_list(
@@ -135,7 +137,7 @@ class ConstructionManager:
                     f"AIS_UNITTYPE_SPECIFIC : {weapon}",
                 ],
             )
-        logging.info(f"Added {len(picked_weapons)} weapons")
+        logger.info(f"Added {len(picked_weapons)} weapons")
 
         # Step 4 - addons
         picked_addons = self.noise_generator.select_random_sublist_from_list(
@@ -150,7 +152,7 @@ class ConstructionManager:
                     f"AIS_UNITTYPE_SPECIFIC : {addon}",
                 ],
             )
-        logging.info(f"Added {len(picked_addons)} addons")
+        logger.info(f"Added {len(picked_addons)} addons")
 
     def find_weapon_not_in_ars_build(self) -> str:
         """Finds a weapon not in the ARS build order trigger. If all weapons are
@@ -171,7 +173,7 @@ class ConstructionManager:
                 unit_type = action_details[1].split(" : ")[1]
                 if unit_type in weapons_to_choose_from:
                     weapons_to_choose_from.remove(unit_type)
-        logging.info(f"Remaining weapons to choose from: '{weapons_to_choose_from}'")
+        logger.info(f"Remaining weapons to choose from: '{weapons_to_choose_from}'")
         if not weapons_to_choose_from:
             return None
         return self.noise_generator.select_random_from_list(weapons_to_choose_from)

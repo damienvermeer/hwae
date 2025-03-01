@@ -8,7 +8,9 @@ Contains all info to read and write HWAR's .lev file type
 
 import struct
 from dataclasses import dataclass, field
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 
 LEV_HEADER_STRUCT = "<LLLLffLLLLLL"
@@ -112,16 +114,16 @@ class LevFile:
 
     def __post_init__(self):
         """Read the specified file and set the internal data"""
-        logging.info(f"Initializing LEV file from: {self.full_file_path}")
+        logger.info(f"Initializing LEV file from: {self.full_file_path}")
         # get the data
         with open(self.full_file_path, "rb") as f:
             self.data = f.read()
-        logging.info(f"Read {len(self.data)} bytes from file")
+        logger.info(f"Read {len(self.data)} bytes from file")
 
         # parse the header - currently assumes all file types are LEVEL1_4CC
         header_data_raw = self.data[: struct.calcsize(LEV_HEADER_STRUCT)]
         self.header = _LevHeader(*struct.unpack(LEV_HEADER_STRUCT, header_data_raw))
-        logging.info("Parsed LEV file header")
+        logger.info("Parsed LEV file header")
 
         # now we need to load in the terrain data itself
         terrain_start = struct.calcsize(LEV_HEADER_STRUCT)
@@ -133,23 +135,23 @@ class LevFile:
             self.terrain_points.append(
                 _LevTerrainPoint(*struct.unpack(LEV_TERRAIN_POINT_STRUCT, point_data))
             )
-        logging.info(f"Loaded {len(self.terrain_points)} terrain points")
+        logger.info(f"Loaded {len(self.terrain_points)} terrain points")
 
         # import the object list data
         self.object_data = self.data[
             self.header.object_list_offset : self.header.model_list_offset
         ]
-        logging.info(f"Loaded {len(self.object_data)} bytes of object data")
+        logger.info(f"Loaded {len(self.object_data)} bytes of object data")
 
         # import the model list data
         if self.header.model_list_offset != 0 and self.header.land_palette_offset != 0:
             self.model_data = self.data[
                 self.header.model_list_offset : self.header.land_palette_offset
             ]
-            logging.info(f"Loaded {len(self.model_data)} bytes of model data")
+            logger.info(f"Loaded {len(self.model_data)} bytes of model data")
         else:
             self.model_data = b""
-            logging.info("No model data present (offsets are 0)")
+            logger.info("No model data present (offsets are 0)")
 
         # Load color palette data
         if (
@@ -164,15 +166,15 @@ class LevFile:
                 color_bytes = color_data[i : i + color_size]
                 x, y, z = struct.unpack("<fff", color_bytes)
                 self.colours.append(_Color(x, y, z))
-            logging.info(f"Loaded {len(self.colours)} colors from palette")
+            logger.info(f"Loaded {len(self.colours)} colors from palette")
         else:
-            logging.info("No color palette data present")
+            logger.info("No color palette data present")
 
         # import the config data
         self.config_data = self.data[
             self.header.level_config_offset : self.header.end_of_last_bit
         ]
-        logging.info(f"Loaded {len(self.config_data)} bytes of config data")
+        logger.info(f"Loaded {len(self.config_data)} bytes of config data")
 
     def save(self, save_in_folder: str, file_name: str) -> None:
         """Saves the LEV file to the specified path, using the data stored
@@ -184,7 +186,7 @@ class LevFile:
         """
         if not file_name.endswith(".lev"):
             file_name += ".lev"
-        logging.info(f"Saving LEV file to: {save_in_folder}/{file_name}")
+        logger.info(f"Saving LEV file to: {save_in_folder}/{file_name}")
 
         # Calculate initial offset after header
         offset = struct.calcsize(LEV_HEADER_STRUCT)
@@ -219,33 +221,33 @@ class LevFile:
         # delete the file if it already exists
         if os.path.exists(output_path):
             os.remove(output_path)
-            logging.info(f"Deleted existing file: {output_path}")
+            logger.info(f"Deleted existing file: {output_path}")
 
         # open the file in the location
         with open(output_path, "wb") as f:
             # pack and write the header
             f.write(self.header.pack())
-            logging.info("Wrote header")
+            logger.info("Wrote header")
 
             # pack and write the terrain points
             f.write(b"".join(point.pack() for point in self.terrain_points))
-            logging.info(f"Wrote {len(self.terrain_points)} terrain points")
+            logger.info(f"Wrote {len(self.terrain_points)} terrain points")
 
             # write the object data
             f.write(self.object_data)
-            logging.info(f"Wrote {len(self.object_data)} bytes of object data")
+            logger.info(f"Wrote {len(self.object_data)} bytes of object data")
 
             # write the model data
             f.write(self.model_data)
-            logging.info(f"Wrote {len(self.model_data)} bytes of model data")
+            logger.info(f"Wrote {len(self.model_data)} bytes of model data")
 
             # write the color palette
             for color in self.colours:
                 f.write(color.pack())
-            logging.info(f"Wrote {len(self.colours)} colors to palette")
+            logger.info(f"Wrote {len(self.colours)} colors to palette")
 
             # write the config data
             f.write(self.config_data)
-            logging.info(f"Wrote {len(self.config_data)} bytes of config data")
+            logger.info(f"Wrote {len(self.config_data)} bytes of config data")
 
-        logging.info(f"Successfully saved LEV file to: {output_path}")
+        logger.info(f"Successfully saved LEV file to: {output_path}")

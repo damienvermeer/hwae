@@ -7,7 +7,9 @@ Contains all info to read and write HWAR's .pat (patrol) file type
 """
 
 from dataclasses import dataclass, field
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 import time
 from typing import List, Tuple
@@ -76,7 +78,7 @@ class PatFile:
                             (coords[0], coords[1], coords[2])
                         )
                 except ValueError:
-                    logging.warning(f"Invalid coordinate format in line: {line}")
+                    logger.warning(f"Invalid coordinate format in line: {line}")
 
     def __getitem__(self, title: str) -> PatrolRecord:
         """Gets a patrol record by title
@@ -150,7 +152,7 @@ class PatFile:
         """
         if not file_name.endswith(".pat"):
             file_name += ".pat"
-        logging.info(f"Saving PAT file to: {save_in_folder}/{file_name}")
+        logger.info(f"Saving PAT file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
         output_path = os.path.join(save_in_folder, file_name)

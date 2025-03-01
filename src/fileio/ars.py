@@ -7,7 +7,9 @@ Contains all info to read and write HWAR's .ars file type (script/triggers)
 """
 
 from dataclasses import dataclass, field
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 import re
 from typing import List
@@ -91,15 +93,15 @@ class ArsFile:
     def __post_init__(self):
         """Load objects from .ars file"""
         if not self.full_file_path:
-            logging.info("ARS: Created empty container")
+            logger.info("ARS: Created empty container")
             return
-        logging.info("ARS: Loading triggers from file")
+        logger.info("ARS: Loading triggers from file")
         with open(self.full_file_path, "r") as f:
             triggers = f.read().split("Trigger: ")
             for trigger in triggers[1:]:  # ignore header
                 record = self._parse_trigger(trigger)
                 self.objects.append(record)
-        logging.info(f"Loaded {len(self.objects)} triggers")
+        logger.info(f"Loaded {len(self.objects)} triggers")
 
     def _parse_trigger(self, trigger: str) -> _ARSRecord | None:
         """Parses a trigger into an _ARSRecord (including processing its
@@ -157,13 +159,13 @@ class ArsFile:
         Args:
             file_to_load (pathlib.Path): The path to the file to load
         """
-        logging.info("ARS reading additional data")
+        logger.info("ARS reading additional data")
         with open(file_to_load, "r") as f:
             triggers = f.read().split("Trigger: ")
             for trigger in triggers[1:]:  # ignore header
                 record = self._parse_trigger(trigger)
                 self.objects.append(record)
-        logging.info(f"Loaded {len(self.objects)} triggers")
+        logger.info(f"Loaded {len(self.objects)} triggers")
 
     def add_action_to_existing_record(
         self, record_name: str, action_title: str, action_details: list[str]
@@ -179,7 +181,7 @@ class ArsFile:
             if record.name == record_name:
                 record.actions.append(_ARSAction(action_title, action_details))
                 return
-        logging.info(f"Record {record_name} not found, action not added")
+        logger.info(f"Record {record_name} not found, action not added")
 
     def get_actions_from_existing_record(
         self, record_name: str
@@ -192,7 +194,7 @@ class ArsFile:
         for record in self.objects:
             if record.name == record_name:
                 return [(action.type, action.values) for action in record.actions]
-        logging.info(f"Record {record_name} not found, actions not found")
+        logger.info(f"Record {record_name} not found, actions not found")
         return []
 
     def save(self, save_in_folder: str, file_name: str) -> None:
@@ -205,11 +207,11 @@ class ArsFile:
 
         if os.path.exists(output_path):
             os.remove(output_path)
-            logging.info(f"Replaced existing file: {output_path}")
+            logger.info(f"Replaced existing file: {output_path}")
 
         with open(output_path, "w") as f:
             f.write("AIRS\n")
             for obj in self.objects:
                 f.write(obj.pack())
 
-        logging.info(f"Saved ARS file to: {output_path}")
+        logger.info(f"Saved ARS file to: {output_path}")

@@ -6,7 +6,10 @@ src.objects
 Contains all info regarding objects for the level
 """
 
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
+
 import math
 from pickletools import TAKEN_FROM_ARGUMENT1
 import random
@@ -458,12 +461,18 @@ class ObjectHandler:
         for x in range(self.terrain_handler.width):
             for z in range(self.terrain_handler.length):
                 if edge_mask[x, z] == 1:
-                    mask = self._update_mask_grid_with_radius(mask, x, z, required_radius // 2, set_to=0)
+                    mask = self._update_mask_grid_with_radius(
+                        mask,
+                        x,
+                        z,
+                        required_radius // 2,
+                        set_to=0,  # mark as not allowed
+                    )
 
         # check if we have any non-zero values in the edge mask
         if np.any(mask):
             return self.noise_generator.select_random_entry_from_2d_array(mask)
-        logging.info("Find location: no suitable location found (empty mask)")
+        logger.info("Find location: no suitable location found (empty mask)")
         return None
 
     def add_carrier_and_return_mask(
@@ -481,7 +490,7 @@ class ObjectHandler:
             np.ndarray: Mask in the carrier's radius for placing extra objects/zones
         """
         # find a coast location
-        logging.info("ADD Carrier: Starting")
+        logger.info("ADD Carrier: Starting")
         x, z = self._find_location(
             where=LocationEnum.COAST, required_radius=required_radius
         )
@@ -490,7 +499,7 @@ class ObjectHandler:
         center_x = self.terrain_handler.width / 2
         center_z = self.terrain_handler.length / 2
         angle = np.rad2deg(np.arctan2(center_z - z, center_x - x))
-        logging.info("ADD Carrier: Calculated location and angle")
+        logger.info("ADD Carrier: Calculated location and angle")
 
         # Update the cached object mask before adding the object
         self._update_cached_object_mask(x, z, required_radius)
@@ -509,7 +518,7 @@ class ObjectHandler:
             team=Team.PLAYER,
             y_rotation=angle,
         )
-        logging.info("ADD Carrier: Calculating mask...")
+        logger.info("ADD Carrier: Calculating mask...")
         # start with array of 0s (assume radius is small)
         mask = np.zeros(
             (self.terrain_handler.width, self.terrain_handler.length), dtype=np.uint8
@@ -542,7 +551,7 @@ class ObjectHandler:
             in_zone (ZoneMarker, optional): The zone to place the objects in. Defaults to None.
             extra_masks (np.ndarray, optional): An extra mask to consider when placing objects. Defaults to None.
         """
-        logging.info(f"Starting template add ({len(object_template)} objects)")
+        logger.info(f"Starting template add ({len(object_template)} objects)")
         # get info from the reference object
         ref_object = object_template[0]
         # get a lotation like normal below defaults to add on land
@@ -598,7 +607,7 @@ class ObjectHandler:
                 team=team.value if isinstance(team, Team) else team,
                 y_rotation=obj_dict.y_rotation,
             )
-        logging.info(f"Added {len(object_template)} objects via template")
+        logger.info(f"Added {len(object_template)} objects via template")
 
     def add_object_on_land_random(
         self,
@@ -693,7 +702,7 @@ class ObjectHandler:
                     consider_zones=True,
                     extra_masks=extra_mask,
                 )
-        logging.info(f"Done adding {len(objs)} alien misc objects")
+        logger.info(f"Done adding {len(objs)} alien misc objects")
 
     def add_scenery(self, map_size: str) -> None:
         """Adds a lot of random/different scenery objects to the level"""
@@ -722,7 +731,7 @@ class ObjectHandler:
                 required_radius=2,
                 consider_zones=True,
             )
-        logging.info(f"Done adding {len(objs)} scenery objects")
+        logger.info(f"Done adding {len(objs)} scenery objects")
 
     def add_zone(
         self,
@@ -742,13 +751,13 @@ class ObjectHandler:
             zone_index (int): Index of the zone (used for enemy team grouping)
             extra_masks (Optional[np.ndarray], optional): Additional mask to consider for placement. Defaults to None.
             extra_zone_spacing (bool, optional): Whether to consider the extra spacing around zones. Defaults to True.
-            
+
         Returns:
             Optional[ZoneMarker]: The created zone marker if successful, None otherwise
         """
         # Try each size, starting with the requested size and going smaller if needed
         current_size = zone_size
-        
+
         while current_size >= ZoneSize.TINY:
             # create zone marker object with current size
             new_zone = ZoneMarker(
@@ -759,7 +768,7 @@ class ObjectHandler:
                 zone_subtype=zone_subtype,
                 zone_index=zone_index,
             )
-            
+
             # find a land location we can place the radius zone at (with some buffer)
             # ... with special args to consider only other zones
             location = self._find_location(
@@ -770,7 +779,7 @@ class ObjectHandler:
                 extra_zone_spacing=extra_zone_spacing,
                 extra_masks=extra_masks,
             )
-            
+
             # and update the zone marker with the actual location
             if location is not None:
                 new_zone.x = location[0]
@@ -778,18 +787,18 @@ class ObjectHandler:
                 # TODO do these need to be backwards?
                 self.zones.append(new_zone)
                 return new_zone
-            
+
             # If we couldn't place it, try a smaller size
             if current_size > ZoneSize.TINY:
-                logging.info(
+                logger.info(
                     f"Could not find location for zone {zone_type} {current_size} {zone_subtype}, trying smaller size"
                 )
                 current_size = ZoneSize(current_size - 1)
             else:
                 # We've tried the smallest size and still couldn't place it
                 break
-        
-        logging.info(
+
+        logger.info(
             f"Could not find location for zone {zone_type} {zone_size} {zone_subtype} even at smallest size"
         )
         return None
@@ -801,7 +810,7 @@ class ObjectHandler:
             zone (ZoneMarker): Zone to populate
         """
         # get the probability list from models for the zone type
-        logging.info("Populating zone: " + str(zone))
+        logger.info("Populating zone: " + str(zone))
         # look up how many objects to add to the zone, based on its size
         num_objects = ZONE_SIZE_TO_NUM_OBJECTS[zone.zone_size]
         # iterate through zones
@@ -844,7 +853,7 @@ class ObjectHandler:
             # then fill from the generic list for others
             all_other_object_dict = BASE_ALL_OTHER
         else:
-            logging.info(
+            logger.info(
                 f"No default case for zone type {zone.zone_type} and special {zone.zone_subtype}"
             )
 
@@ -890,7 +899,7 @@ class ObjectHandler:
                     y_offset=obj.y_offset,
                     in_zone=zone,
                 )
-        logging.info("Populating zone: " + str(zone) + " completed")
+        logger.info("Populating zone: " + str(zone) + " completed")
 
     def create_patrol_points_hull(self, n_points: int = 3) -> None:
         """Generates a convex hull around the patrol points

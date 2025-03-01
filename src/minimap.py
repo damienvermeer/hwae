@@ -7,7 +7,9 @@ from fileio.cfg import CfgFile
 import copy
 from pathlib import Path
 import numpy as np
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 
 
 def generate_minimap(
@@ -23,10 +25,10 @@ def generate_minimap(
         cfg_interface (CfgFile): Interface to the config file
         save_location (str): Location to save the minimap
     """
-    logging.info("Starting minimap generation...")
+    logger.info("Starting minimap generation...")
 
     # Step 1 - down/upsample the 2D terrain data from its current size to 128x128
-    logging.info(
+    logger.info(
         f"Step 1: Downsampling terrain from {terrain_data.width}x{terrain_data.length} to 128x128..."
     )
 
@@ -42,12 +44,12 @@ def generate_minimap(
         reshaped_terrain = reshaped_terrain[:128, :128]
 
     # Step 2 - generate a texture lookup list from the config file
-    logging.info("Step 2: Generating texture color lookup table...")
+    logger.info("Step 2: Generating texture color lookup table...")
     minimap_texture_lookup = get_texture_lookup_list(cfg_interface)
 
     # Step 3 - using the terrain dimensions, generate a 2D array of the same size
     # ... and apply the average colour of the terrain at that position
-    logging.info("Step 3: Applying terrain textures to minimap...")
+    logger.info("Step 3: Applying terrain textures to minimap...")
     minimap = np.zeros((128, 128, 3), dtype=np.uint8)  # 3 for RGB channels
     for row_id in range(128):
         for col_id in range(128):
@@ -57,13 +59,13 @@ def generate_minimap(
             minimap[row_id, col_id] = minimap_texture_lookup[applied_texture]
 
     # Step 4 - apply water with blue colour for now
-    logging.info("Step 4: Applying water coloring...")
+    logger.info("Step 4: Applying water coloring...")
     minimap[
         np.array([[point.height for point in row] for row in reshaped_terrain]) < -8
     ] = (0, 0, 255)
 
     # Step 5 - load template map file, apply palette and save
-    logging.info("Step 5: Applying palette and saving minimap...")
+    logger.info("Step 5: Applying palette and saving minimap...")
     # load from array
     minimap_img = Image.fromarray(minimap.astype("uint8"))
     # Apply the palette from the template PCX
@@ -79,7 +81,7 @@ def generate_minimap(
         version=5,  # Version 5 PCX
         bits=8,  # 8-bit color
     )
-    logging.info(f"Minimap saved to: {save_location}")
+    logger.info(f"Minimap saved to: {save_location}")
 
 
 def get_texture_lookup_list(cfg_interface: CfgFile) -> list:

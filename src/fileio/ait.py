@@ -7,7 +7,9 @@ Contains all info to read and write HWAR's .ait (text) file type
 """
 
 from dataclasses import dataclass, field
-import logging
+from src.logger import get_logger
+
+logger = get_logger()
 import os
 from typing import List, Dict
 
@@ -172,7 +174,7 @@ class AitFile:
         """
         if not file_name.endswith(".ait"):
             file_name += ".ait"
-        logging.info(f"Saving AIT file to: {save_in_folder}/{file_name}")
+        logger.info(f"Saving AIT file to: {save_in_folder}/{file_name}")
 
         # Create output path and ensure directory exists
         output_path = os.path.join(save_in_folder, file_name)
