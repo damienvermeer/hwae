@@ -33,7 +33,9 @@ def main():
     # TODO somehow specify the output location
     OUTPUT_PATH = Path(r"C:\HWAR\HWAR\modtest2")
     NEW_LEVEL_NAME = "Level53"
-    noise_generator = NoiseGenerator(seed=435345)  # 9977 strange terrain textures
+    noise_generator = NoiseGenerator(seed=9977)
+    # 9977 strange terrain textures
+    # 435345 performance shit?
 
     # TODO select from alternative map sizes - only large (L22, 256*256) for now
     map_size_template = "large"

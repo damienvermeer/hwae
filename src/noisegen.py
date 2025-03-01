@@ -40,7 +40,7 @@ class NoiseGenerator:
             np.ndarray: 2D noise map
         """
         # create perlin noise map
-        map = generate_fractal_noise_2d((height, width), (8, 8), 5)
+        map = generate_fractal_noise_2d((height, width), (8, 8), 5, persistence=0.4)
         # scale the entire map to have a value between 0 and 1
         map = (map - np.min(map)) / (np.max(map) - np.min(map))
         # apply floor/cutoff (typically used for terrain)
