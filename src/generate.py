@@ -283,6 +283,19 @@ def generate_new_map(
     for aim_file in (exe_parent / NEW_LEVEL_NAME).glob("*.aim"):
         os.remove(aim_file)
 
+    # Handle the Levels.lst file
+    logger.info("Handling Levels.lst")
+    levels_file = exe_parent / "Config" / "Levels.lst"
+    template_levels = template_root / "Levels.lst"
+    # backup existing file if needed
+    if levels_file.exists() and levels_file.read_text() != template_levels.read_text():
+        logger.info("Backing up existing Levels.lst")
+        levels_file.rename(levels_file.with_suffix(".lst.bak"))
+    # finally copy the template Levels.lst (after making the folder(s))
+    levels_file.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(template_levels, levels_file)
+    logger.info("Saved Levels.lst")
+
     logger.info("Map generation complete!")
     # save the json config used into the new level directory (but set the seed
     # ... to the seed we have used though)
