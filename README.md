@@ -1,4 +1,4 @@
-# HWAE - Hostile Waters: Antaeus Eternal
+# Hostile Waters: Antaeus Eternal (HWAE) - Random Map Generator
 
 ![hwae_banner](https://github.com/user-attachments/assets/71f8b18a-485b-4944-b67f-624f9a8ded14)
 ![Banner image from here](https://www.steamgriddb.com/hero/16810)
