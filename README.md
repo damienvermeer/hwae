@@ -77,7 +77,7 @@ Currently, only one mission type is supported:
 
 A weapon crate optional objective has been implemented as a demonstration of how to create optional objectives. Sampling the weapon crate will give you an extra weapon.
 
-## 🔄 Modifying a Generated Map
+## 📑 Modifying a Generated Map
 
 Each generated map includes a JSON configuration file in its folder with customizable options:
 - Starting energy
@@ -90,6 +90,12 @@ To modify an existing map:
 3. The map will be regenerated with the same terrain and enemy bases as before (unless the number of scrap or enemy bases is modified) but with the modified construction options
 
 See `construction.py` for the names of available weapons, addons, vehicles, and soulcatchers.
+
+## 🔄 Resetting Hostile Waters to play other maps
+
+To reset Hostile Waters to play the base game, delete the `Levels.lst` file in the `Config` folder and restart the game.
+
+Hostile Waters Antaeus Eternal creates this file automatically (which overrides the internal version in the game's packed files) to launch the new level.
 
 ## ⚠️ Limitations
 
