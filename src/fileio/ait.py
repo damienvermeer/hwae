@@ -1,0 +1,184 @@
+"""
+HWAE (Hostile Waters Antaeus Eternal)
+
+fileio.ait
+
+Contains all info to read and write HWAR's .ait (text) file type
+"""
+
+from dataclasses import dataclass, field
+from typing import List, Dict
+from pathlib import Path
+from logger import get_logger
+
+logger = get_logger()
+
+
+@dataclass
+class TextRecord:
+    """Container for a text record with a name and content"""
+
+    name: str
+    content: str = ""
+
+
+@dataclass
+class AitFile:
+    """Container for an AIT (text) file"""
+
+    full_file_path: str
+    text_records: List[TextRecord] = field(default_factory=list)
+
+    def __post_init__(self):
+        """Read the specified file and set the internal data"""
+        if self.full_file_path and Path(self.full_file_path).exists():
+            with open(self.full_file_path, "r") as f:
+                data = f.read()
+
+            # Parse the data
+            self._parse_ait_data(data)
+
+    def _parse_ait_data(self, data: str) -> None:
+        """Parse the text file data into text records
+
+        Args:
+            data (str): The raw file data to parse
+        """
+        current_record = None
+
+        # Parse the data
+        lines = data.splitlines()
+        i = 0
+
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Skip empty lines
+            if not line:
+                i += 1
+                continue
+
+            # Skip comment lines
+            if line.startswith(";"):
+                i += 1
+                continue
+
+            # Check for section name (enclosed in square brackets)
+            if line.startswith("[") and line.endswith("]"):
+                # Extract the section name without brackets
+                section_name = line[1:-1]
+
+                # Create a new text record
+                current_record = TextRecord(name=section_name)
+                self.text_records.append(current_record)
+
+                # Move to the next line to check for text content
+                i += 1
+
+                # If we have a next line and it's in quotes, it's the text content
+                if (
+                    i < len(lines)
+                    and lines[i].strip().startswith('"')
+                    and lines[i].strip().endswith('"')
+                ):
+                    # Extract the content without quotes
+                    content = lines[i].strip()[1:-1]
+                    current_record.content = content
+
+            i += 1
+
+    def __getitem__(self, name: str) -> TextRecord:
+        """Gets a text record by name
+
+        Args:
+            name (str): Name of the text record to get
+
+        Returns:
+            TextRecord: The text record with the specified name
+
+        Raises:
+            KeyError: If the text record doesn't exist
+        """
+        for record in self.text_records:
+            if record.name == name:
+                return record
+        raise KeyError(f"Text record '{name}' not found")
+
+    def add_text_record(self, name: str, content: str = "") -> TextRecord:
+        """Add a new text record
+
+        Args:
+            name (str): Name for the text record
+            content (str, optional): Content of the text. Defaults to "".
+
+        Returns:
+            TextRecord: The newly created text record
+        """
+        # Check if record with this name already exists
+        try:
+            existing_record = self[name]
+            # If it exists, update its content
+            existing_record.content = content
+            return existing_record
+        except KeyError:
+            # Create new record if it doesn't exist
+            new_record = TextRecord(name=name, content=content)
+            self.text_records.append(new_record)
+            return new_record
+
+    def add_action_to_existing_record(
+        self, record_name: str, action_title: str, action_details: List[str]
+    ) -> None:
+        """Add an action to an existing text record
+
+        Args:
+            record_name (str): Name of the text record to add the action to
+            action_title (str): Title of the action to add
+            action_details (List[str]): Details of the action to add
+        """
+        try:
+            record = self[record_name]
+            # For text records, we might just append the action details to the content
+            # This is a placeholder implementation - adjust as needed for your specific format
+            details_str = ", ".join(action_details)
+            record.content += f" {action_title}: {details_str}"
+        except KeyError:
+            # Create a new record if it doesn't exist
+            details_str = ", ".join(action_details)
+            content = f"{action_title}: {details_str}"
+            self.add_text_record(name=record_name, content=content)
+
+    def __str__(self) -> str:
+        """Returns the entire text data as a string
+
+        Returns:
+            str: Text data as a string
+        """
+        return_data = ";Generated by HWAE\n\n"
+
+        for record in self.text_records:
+            # Write section name in brackets
+            return_data += f"[{record.name}]\n"
+            # Write content in quotes
+            return_data += f'"{record.content}"\n\n'
+
+        return return_data
+
+    def save(self, save_in_folder: str, file_name: str) -> None:
+        """Saves the AIT file to the specified path
+
+        Args:
+            save_in_folder (str): Location to save the file to
+            file_name (str): Name of the file to save as
+        """
+        if not file_name.lower().endswith(".ait"):
+            file_name += ".ait"
+        logger.info(f"Saving AIT file to: {save_in_folder}/{file_name}")
+
+        # Create output path and ensure directory exists
+        output_path = Path(save_in_folder) / file_name
+        Path(save_in_folder).mkdir(parents=True, exist_ok=True)
+
+        # Write the file
+        with open(output_path, "w") as f:
+            f.write(self.__str__())

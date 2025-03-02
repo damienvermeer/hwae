@@ -1,0 +1,20 @@
+; first 
+ice1.pcx  0.500, 65,67,67, 0,0,0, 0.000, ROCK
+; next = shore
+trsand2.pcx  0.500, 109,95,69, 0,0,0, 0.000, SAND
+; next 5 = normal/grass/typical
+green.pcx  0.500, 35,64,15, 0,0,0, 0.000, GRASS
+grass2.pcx  0.500, 48,73,14, 0,0,0, 0.000, GRASS
+sandgrav.pcx  0.500, 111,99,73, 255,0,0, 0.000, ROCK
+sandystone.pcx  0.500, 65,56,40, 64,80,48, 0.000, MUD
+paving.pcx  0.500, 90,93,79, 0,0,0, 0.000, CONCRETE
+; next hills/peak
+troprock1.pcx  0.500, 81,73,53, 0,0,0, 0.000, ROCK
+; ZONES: Base (3 textures required, decreasing likelihood)
+browngrass.pcx  0.500, 85,73,48, 53,67,40, 0.000, GRASS
+alienfloor1.pcx  0.500, 24,16,12, 0,0,0, 0.000, ALIENDRY
+orange1.pcx  0.500, 122,56,21, 0,0,0, 0.000, ALIENBLOOD
+; ZONES: Scrap (3 textures required, decreasing likelihood)
+l2tarm.pcx  0.500, 108,105,87, 0,0,0, 0.000, CONCRETE
+l2tarm2.pcx  0.500, 99,93,70, 0,0,0, 0.000, CONCRETE
+browngrass.pcx  0.500, 85,73,48, 53,67,40, 0.000, GRASS

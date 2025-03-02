@@ -1,0 +1,54 @@
+; updated by HWAE
+HOSTILE "HWAE_Level" ; Go straight to the new level
+; now allow the rest of the game to launch as normal
+HOSTILEMENU ""
+HOSTILE "Level1"	;complete
+MOVIE "Movies\nanobot\nanobot.cfg"
+HOSTILE "Level2"	;complete
+MOVIE "Movies\Ransom\Ransom.cfg"
+HOSTILE "Level3"	;complete (remove huts + canoes)
+MOVIE "Movies\Flags\Flags.cfg"
+HOSTILE "level4"	;complete
+MOVIE "Movies\conference\conference.cfg"
+HOSTILE "level5"	;beta
+MOVIE "Movies\aftermath\aftermath.cfg"
+HOSTILE "level6"	;beta
+MOVIE "Movies\chamber\chamber.cfg"
+HOSTILE "level7"	;beta
+MOVIE "Movies\testtubes\testtubes.cfg"
+HOSTILE "level10"	;beta
+MOVIE "Movies\foreshadow\foreshadow.cfg"
+HOSTILE "level11"	;beta
+MOVIE "Movies\tombakercold\tombakercold.cfg"
+HOSTILE "level12"	;beta
+MOVIE "Movies\handh\handh.cfg"
+HOSTILE "level13"	;beta
+MOVIE "Movies\Coldmovieone\Coldmovieone.cfg"
+HOSTILE "level14"	;beta
+MOVIE "Movies\ufo\ufo.cfg"
+HOSTILE "level15"	;beta
+MOVIE "Movies\smashtubes\smashtubes.cfg"
+HOSTILE "level16"	;beta
+MOVIE "Movies\Coldmovietwo\Coldmovietwo.cfg"
+HOSTILE "level17"	;beta
+MOVIE "Movies\culturefive\culturefive.cfg"
+HOSTILE "level19"	;beta
+MOVIE "Movies\cabalmovie\cabalmovie.cfg"
+HOSTILE "level20"	;beta
+MOVIE "Movies\tv\tv.cfg"
+HOSTILE "level21"	;beta
+MOVIE "Movies\Coldmoviethree\Coldmoviethree.cfg"
+HOSTILE "level22"	;beta
+MOVIE "Movies\Coldmoviefive\Coldmoviefive.cfg"
+HOSTILE "level23"	;beta
+MOVIE "Movies\terra\terra.cfg"
+HOSTILE "level25"	;beta
+MOVIE "Movies\finale\finale.cfg"
+HOSTILEMENU ""
+MOVIE "Movies\intro\intro.cfg"
+HOSTILEMENU ""
+MOVIE "Movies\newintro\newintro.cfg"
+MOVIE "Movies\newintromiddle\newintromiddle.cfg"
+MOVIE "Movies\newintroend\newintroend.cfg"
+
+
