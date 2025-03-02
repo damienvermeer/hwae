@@ -245,7 +245,7 @@ def generate_new_map(
         # update ait so we dont get unlinked text
         ait_data.add_text_record(
             name="hwae_weapon_crate__sample_crate",
-            content="Sample the weapon crate",
+            content="[Optional] Sample the weapon crate",
         )
         spare_weapon = construction_manager.find_weapon_not_in_ars_build()
         if spare_weapon is not None:
