@@ -93,13 +93,13 @@ class _LevTerrainPoint:
 class _Color:
     """RGB color data"""
 
-    x: float
-    y: float
-    z: float
+    r: float
+    g: float
+    b: float
 
     def pack(self) -> bytes:
         """Pack color into bytes"""
-        return struct.pack("<fff", self.x, self.y, self.z)
+        return struct.pack("<fff", self.r, self.g, self.b)
 
 
 @dataclass
@@ -120,7 +120,7 @@ class LevFile:
         self.data = b""
 
         if not self.full_file_path or not Path(self.full_file_path).exists():
-            logger.warning(f"LEV file not found or empty path: {self.full_file_path}")
+            logger.info(f"LEV file not found or empty path: {self.full_file_path}")
             return
 
         logger.info(f"Initializing LEV file from: {self.full_file_path}")

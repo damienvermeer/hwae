@@ -10,9 +10,6 @@ from logger import get_logger
 
 logger = get_logger()
 
-import math
-from pickletools import TAKEN_FROM_ARGUMENT1
-import random
 from dataclasses import dataclass
 from enum import IntEnum, auto
 from pathlib import Path
@@ -414,30 +411,11 @@ class ObjectHandler:
         else:
             mask *= self._get_land_mask()
 
-        # Create a heatmap visualization of the mask
-        # import matplotlib.pyplot as plt
-
-        # plt.figure(figsize=(10, 10))
-        # plt.imshow(mask, cmap="hot", interpolation="nearest")
-        # plt.colorbar(label="Mask Value")
-        # plt.title("Mask Heatmap")
-        # plt.xlabel("X")
-        # plt.ylabel("Z")
-        # plt.show()
-
         # apply that mask to the other masks specified in the argument
         if consider_objects:
             mask *= self._get_object_mask()
         if consider_zones and in_zone is None:
             mask *= self._get_all_zone_mask()
-
-        # plt.figure(figsize=(10, 10))
-        # plt.imshow(mask, cmap="hot", interpolation="nearest")
-        # plt.colorbar(label="Mask Value")
-        # plt.title("Mask Heatmap")
-        # plt.xlabel("X")
-        # plt.ylabel("Z")
-        # plt.show()
         if extra_zone_spacing:
             mask *= self._get_zone_seperation_mask(
                 extra_zone_spacing=extra_zone_spacing
@@ -445,13 +423,6 @@ class ObjectHandler:
         if extra_masks is not None:
             mask *= extra_masks
 
-        # plt.figure(figsize=(10, 10))
-        # plt.imshow(mask, cmap="hot", interpolation="nearest")
-        # plt.colorbar(label="Mask Value")
-        # plt.title("Mask Heatmap")
-        # plt.xlabel("X")
-        # plt.ylabel("Z")
-        # plt.show()
         # detect edges, and for each edge draw a circle of radius required_radius
         # ... (rounded up to closest int)
         required_radius = max(1, round(required_radius))
@@ -670,9 +641,6 @@ class ObjectHandler:
         Args:
             map_size (str): Size of the map
             carrier_xz (tuple[float, float], optional): Carrier location in xz. Defaults to None.
-
-
-
         """
         # TODO in future, switch below on map size - the below seems reasonable
         # ... for 'large' 256x256
@@ -691,7 +659,7 @@ class ObjectHandler:
                 set_to=0,
             )
 
-        # NOTE currently only templates
+        # NOTE currently only templates used here
         objs = [TEMPLATE_ALIEN_AA] * 2 + [TEMPLATE_ALIEN_RADAR] * 2
         for obj in objs:
             if isinstance(obj, tuple):
@@ -784,7 +752,6 @@ class ObjectHandler:
             if location is not None:
                 new_zone.x = location[0]
                 new_zone.z = location[1]
-                # TODO do these need to be backwards?
                 self.zones.append(new_zone)
                 return new_zone
 
@@ -901,13 +868,13 @@ class ObjectHandler:
                 )
         logger.info("Populating zone: " + str(zone) + " completed")
 
-    def create_patrol_points_hull(self, n_points: int = 3) -> None:
-        """Generates a convex hull around the patrol points
+    def create_patrol_points(self, n_points: int = 3) -> None:
+        """Generates a patrol of n_points
 
         Args:
             n_points (int): Number of patrol points to use
         """
-        # select 5 points at random using noisegen from the map coords
+        # select n_points at random using noisegen from the map coords
         points = []
         for _ in range(n_points):
             x, z = self.noise_generator.select_random_entry_from_2d_array(
@@ -917,8 +884,6 @@ class ObjectHandler:
                 55, 100
             )
             points.append((x, y, z))
-        # if we stick to 3 points, we dont need to use a convex hull - triangles
-        # ... are always convex
         return points
 
     def add_object_centered_on_zone(self, object_type: str, zone: ZoneMarker) -> int:

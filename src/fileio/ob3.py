@@ -28,7 +28,7 @@ MAP_SCALER = 51.2
 class _OB3Object:
     """Represents an object present in the ob3 file."""
 
-    object_size_in_bytes: int = 148
+    object_size_in_bytes: int = 148  # does NOT support addons in objects yet
     object_type: Union[bytes, str] = b""
     attachment_type: Union[bytes, str] = b""
     # rotation matrix (default to identity 3x3 matrix)
@@ -100,13 +100,13 @@ class _OB3Object:
         # make location vector
         self.location = np.array([self._loc_x, self._loc_y, self._loc_z])
         # make nice rotation matrix
-        self._rotation_matrix = np.array(
-            [
-                [self.r1_a, self.r1_b, self.r1_c],
-                [self.r2_a, self.r2_b, self.r2_c],
-                [self.r3_a, self.r3_b, self.r3_c],
-            ]
-        )
+        # self._rotation_matrix = np.array(
+        #     [
+        #         [self.r1_a, self.r1_b, self.r1_c],
+        #         [self.r2_a, self.r2_b, self.r2_c],
+        #         [self.r3_a, self.r3_b, self.r3_c],
+        #     ]
+        # )
         # check if renderable_id is -1 - this means set it the same as my_id
         if self.renderable_id == -1:
             self.renderable_id = self.my_id
@@ -114,9 +114,9 @@ class _OB3Object:
     def pack(self) -> bytes:
         """Pack object into bytes for saving back to OB3"""
         # extract rotation matrix back into r1_a r1_b etc
-        for i, row in enumerate(["r1", "r2", "r3"]):
-            for j, col in enumerate(["a", "b", "c"]):
-                setattr(self, f"{row}_{col}", self._rotation_matrix[i][j])
+        # for i, row in enumerate(["r1", "r2", "r3"]):
+        #     for j, col in enumerate(["a", "b", "c"]):
+        #         setattr(self, f"{row}_{col}", self._rotation_matrix[i][j])
         # and same for location
         self._loc_x = self.location[0]
         self._loc_y = self.location[1]
@@ -226,7 +226,7 @@ class Ob3File:
         new_obj.object_type = object_type
         # NOTE: LEV vs OB3 has different scales. In OB3, the x and z values are
         # ... in 10x10 units, while in LEV they are 1x1 units.
-        # NOTE in OB3, the x and z axis are swapped
+        # NOTE in OB3, the x and z axis are swapped it seems
         new_obj._loc_x = location[2] * 10
         new_obj._loc_y = location[1]
         new_obj._loc_z = location[0] * 10

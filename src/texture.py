@@ -6,16 +6,12 @@ src.texture
 Handles selecting and copying textures
 """
 
-from dataclasses import dataclass
 from logger import get_logger
 
 logger = get_logger()
 from fileio.cfg import CfgFile
-from fileio.ob3 import MAP_SCALER
 from noisegen import NoiseGenerator
-import numpy as np
 import os
-from PIL import Image
 import shutil
 from pathlib import Path
 

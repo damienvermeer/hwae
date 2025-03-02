@@ -11,10 +11,6 @@ from logger import get_logger
 from paths import get_assets_path
 
 logger = get_logger()
-import math
-from enum import IntEnum, auto
-from pathlib import Path
-from typing import Any, Optional
 
 from PIL import Image
 import numpy as np
@@ -27,6 +23,8 @@ from models import ZoneMarker
 
 @dataclass
 class TerrainHandler:
+    """Class for handling the terrain of the level"""
+
     lev_interface: LevFile
     noise_gen: NoiseGenerator
 
@@ -174,10 +172,6 @@ class TerrainHandler:
 
         # Step 6 - apply random map textures
         logger.info("Step 6: Applying terrain textures...")
-        # 1 sea, 1 shore, 5 normal, 1 hill, 1 peak
-        # Step 6a - get a noisemap we will use for the variety in textures, with more
-        # ... noise in it. scale the map between 0 and 4 (integers only)
-        N = 5  # number of 'normal textures'
         noise_map = self.noise_gen.random_noisemap(self.width, self.length)
         # Map noise values (0-1) to texture indices (0-N) with decreasing frequency
         # Create thresholds that give exponentially less space to higher values
@@ -267,68 +261,3 @@ class TerrainHandler:
                         [self.terrain_points[x, y].height, avg_height]
                     )
         logger.info("Zone: Flattening terrain: Completed")
-
-    # def _generate_upscaled_height_array(
-    #     self, scale: int = 10
-    # ) -> tuple[np.ndarray, int, int]:
-    #     """Upscales the height array by a factor of scale, with intermediate
-    #     points linearly interpolated between the original points.
-
-    #     Args:
-    #         scale (int, optional): Scale to apply in each direction. Defaults to 10 (
-    #         turns 256x256 into 2560x2560).
-
-    #     Returns:
-    #         np.ndarray: Upscaled 2 dimensional height array
-    #         int: Width of the upscaled array
-    #         int: Length of the upscaled array
-    #     """
-    #     # Get original height array
-    #     height_array = self._get_height_2d_array()
-    #     logger.info("Terrain upscale: Got original height array")
-
-    #     # Create coordinate arrays for output
-    #     x = np.linspace(0, self.width - 1, self.width * scale)
-    #     z = np.linspace(0, self.length - 1, self.length * scale)
-    #     logger.info("Terrain upscale: Created coordinate arrays")
-
-    #     # Get integer and fractional parts
-    #     x0 = x.astype(np.int32)
-    #     z0 = z.astype(np.int32)
-    #     x1 = np.minimum(x0 + 1, self.width - 1)
-    #     z1 = np.minimum(z0 + 1, self.length - 1)
-    #     xf = x - x0
-    #     zf = z - z0
-    #     logger.info("Terrain upscale: Computed integer and fractional parts")
-
-    #     # Create meshgrids for vectorized computation
-    #     XF, ZF = np.meshgrid(xf, zf, indexing="ij")
-    #     X0, Z0 = np.meshgrid(x0, z0, indexing="ij")
-    #     X1, Z1 = np.meshgrid(x1, z1, indexing="ij")
-    #     logger.info("Terrain upscale: Created meshgrids")
-
-    #     # Get corner values using advanced indexing
-    #     v00 = height_array[X0, Z0]
-    #     v01 = height_array[X0, Z1]
-    #     v10 = height_array[X1, Z0]
-    #     v11 = height_array[X1, Z1]
-    #     logger.info("Got corner values")
-
-    #     # Vectorized bilinear interpolation
-    #     result = (
-    #         v00 * (1 - XF) * (1 - ZF)
-    #         + v01 * (1 - XF) * ZF
-    #         + v10 * XF * (1 - ZF)
-    #         + v11 * XF * ZF
-    #     )
-    #     logger.info("Terrain upscale: Completed bilinear interpolation")
-
-    #     # Handle exact integer positions
-    #     exact_x = XF == 0
-    #     exact_z = ZF == 0
-    #     exact_points = exact_x & exact_z
-    #     if np.any(exact_points):
-    #         result[exact_points] = height_array[X0[exact_points], Z0[exact_points]]
-
-    #     logger.info("Terrain upscale: Completed height array upscaling")
-    #     return result, self.width * scale, self.length * scale

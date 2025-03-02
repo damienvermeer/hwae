@@ -58,12 +58,7 @@ class PatFile:
         current_record = None
 
         # Parse the data
-        for line in data.splitlines():
-            line = line.strip()
-            # Skip empty lines
-            if not line:
-                continue
-
+        for line in [x.strip() for x in data.splitlines() if x.strip()]:
             if line.startswith("[") and line.endswith("]"):
                 # New section found, create a new patrol record
                 title = line.strip("[]")

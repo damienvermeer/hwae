@@ -1,11 +1,8 @@
 """Functions for generating the minimap (map.pcx) file"""
 
 from PIL import Image
-from fileio import cfg
 from terrain import TerrainHandler
 from fileio.cfg import CfgFile
-import copy
-from pathlib import Path
 import numpy as np
 from logger import get_logger
 from paths import get_assets_path, get_textures_path

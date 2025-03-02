@@ -8,17 +8,14 @@ Contains the UI for the map generator
 
 # python imports
 import tkinter as tk
+from tkinter import ttk
 import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 import threading
-import json
-import os
-import sys
 import traceback
 import webbrowser
 from pathlib import Path
 import sv_ttk
-from tkinter import ttk
 
 # local imports
 from constants import VERSION_STR, PROGRESS_STEPS, NEW_LEVEL_NAME

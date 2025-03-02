@@ -45,7 +45,6 @@ class AitFile:
             data (str): The raw file data to parse
         """
         current_record = None
-        in_header_section = False
 
         # Parse the data
         lines = data.splitlines()

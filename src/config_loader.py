@@ -49,15 +49,13 @@ class MapConfig:
             logger.info(f"Loaded configuration from {json_path}")
             return cls(**config_data)
         except FileNotFoundError:
-            logger.warning(
-                f"Configuration file not found at {json_path}, using defaults"
-            )
+            logger.info(f"Configuration file not found at {json_path}, using defaults")
             return cls()
         except json.JSONDecodeError:
-            logger.error(f"Error parsing JSON from {json_path}, using defaults")
+            logger.info(f"Error parsing JSON from {json_path}, using defaults")
             return cls()
         except Exception as e:
-            logger.error(
+            logger.info(
                 f"Unexpected error loading configuration: {str(e)}, using defaults"
             )
             return cls()
@@ -73,7 +71,8 @@ class MapConfig:
         """
         try:
             # Ensure directory exists
-            os.makedirs(os.path.dirname(json_path), exist_ok=True)
+            json_path = Path(json_path)
+            json_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(json_path, "w") as f:
                 json.dump(self.__dict__, f, indent=4)

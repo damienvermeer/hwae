@@ -5,13 +5,9 @@ Python package (released as a pyinstaller exe) to generate additional maps for H
 """
 
 import os
-import sys
 import shutil
 import pathlib
-import random
-import numpy as np
 from pathlib import Path
-import time
 
 from fileio.cfg import CfgFile
 from fileio.lev import LevFile
@@ -24,14 +20,13 @@ from fileio.ait import AitFile
 from construction import ConstructionManager
 from noisegen import NoiseGenerator
 from objects import ObjectHandler
-from enums import Team
 from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
 from zones import ZoneManager, ZoneType, ZoneSize, ZoneSubType
 from constants import NEW_LEVEL_NAME
 from paths import get_templates_path, get_textures_path
-from logger import setup_logger, get_logger, close_logger
+from logger import setup_logger, close_logger
 from config_loader import load_config, MapConfig
 
 
@@ -161,7 +156,7 @@ def generate_new_map(
         map_config.num_extra_enemy_bases - 1
         # ^ take off 1 as we always get at least 1 base
         if map_config.num_extra_enemy_bases >= 0
-        else noise_generator.randint(0, 4)
+        else noise_generator.randint(1, 5)
     )
     zone_manager.generate_random_zones(num_extra_enemy_bases, ZoneType.BASE)
 
@@ -172,7 +167,7 @@ def generate_new_map(
         map_config.num_scrap_zones - 1
         # ^ take off 1 as we always get at least 1 scrap zone
         if map_config.num_scrap_zones >= 0
-        else noise_generator.randint(1, 3)
+        else noise_generator.randint(1, 5)
     )
     zone_manager.generate_random_zones(num_scrap_zones, zone_type=ZoneType.SCRAP)
 
@@ -190,9 +185,9 @@ def generate_new_map(
     object_handler.add_scenery(map_size_template)
     logger.info("Adding alien miscellaneous objects")
     object_handler.add_alien_misc(carrier_xz=[xr, zr], map_size=map_size_template)
-    # pick 3-7 random points within the map, then generate a convex hull
+    # pick 3-6 random points within the map for patrol
     logger.info("Creating patrol points")
-    patrol_points = object_handler.create_patrol_points_hull(
+    patrol_points = object_handler.create_patrol_points(
         n_points=noise_generator.randint(3, 7)
     )
     pat_data.add_patrol_record("patrol1", patrol_points)
@@ -200,9 +195,9 @@ def generate_new_map(
     logger.info("Adding flying units with patrol routes")
     for _ in range(noise_generator.randint(3, 7)):
         new_obj_id = object_handler.add_object_on_land_random(
-            "MediumFlyer" if noise_generator.randint(0, 11) > 5 else "SmallFlyer",
+            "MediumFlyer",  # small flyers seem to get stuck on terrain
             team=7,  # <-- use the last alien team, same as scattered AA and radar
-            required_radius=1,
+            required_radius=4,
             y_offset=15,
         )
         if new_obj_id is None:
@@ -219,7 +214,7 @@ def generate_new_map(
     generate_minimap(terrain_handler, cfg_data, exe_parent / NEW_LEVEL_NAME / "map.pcx")
 
     # STEP 12 - CONSTRUCTION ----------------------------------------------------------
-    # do this as late as possible - so if it changes, it doesnt change the level
+    # do this as late as possible - so if it changes, it doesnt change the level data
     progress_callback("Selecting vehicles & addons")
     logger.info("Setting up construction availability")
     construction_manager = ConstructionManager(ars_data, noise_generator, map_config)
@@ -227,7 +222,7 @@ def generate_new_map(
 
     # Set EJ if not already set by configuration
     if map_config.starting_ej == -1:
-        cfg_data["LevelCash"] = noise_generator.randint(12, 32) * 250
+        cfg_data["LevelCash"] = noise_generator.randint(12, 32) * 250  # 4k-8k
         logger.info(f"Set random EJ: {cfg_data['LevelCash']}")
 
     # STEP 13 - FINALISE SCRIPT/TRIGGERS -------------------------------------------------------
@@ -236,7 +231,7 @@ def generate_new_map(
     weapon_zone = [
         x for x in object_handler.zones if x.zone_subtype == ZoneSubType.WEAPON_CRATE
     ]
-    if weapon_zone:  # TODO if a crate zone is present
+    if weapon_zone:
         logger.info("Setting up weapon crate zone")
         weapon_zone = weapon_zone[0]
         ars_data.load_additional_data(

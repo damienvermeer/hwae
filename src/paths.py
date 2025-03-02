@@ -6,7 +6,6 @@ paths.py
 Handles path resolution for both development and PyInstaller environments
 """
 
-import os
 import sys
 from pathlib import Path
 

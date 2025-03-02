@@ -8,7 +8,6 @@ Custom logger for the HWAE application that logs to both console and a CSV file
 
 import logging
 import csv
-import os
 import datetime
 from pathlib import Path
 
