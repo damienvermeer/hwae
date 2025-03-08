@@ -9,9 +9,16 @@ Contains abstract base class for zones
 from dataclasses import dataclass, field
 import numpy as np
 from logger import get_logger
-from typing import Union
 
 logger = get_logger()
+from typing import Union, TYPE_CHECKING
+
+from fileio.ars import ArsFile
+from fileio.ail import AilFile
+from fileio.ait import AitFile
+from construction import ConstructionManager
+from pathlib import Path
+
 
 from noisegen import NoiseGenerator
 from models import (
@@ -95,16 +102,30 @@ class Zone(ABC):
     def mask(self) -> np.ndarray:
         return self._mask()
 
-    def update_mission_logic(self, ars_data: "ArsFile") -> None:
-        """Updates the
+    def update_mission_logic(
+        self,
+        level_logic: ArsFile,
+        location_data: AilFile,
+        text_data: AitFile,
+        template_root: Path,
+        construction_manager: ConstructionManager,
+    ) -> None:
+        """Updates the mission logic for this zone.
 
         Args:
-            ars_data (ArsFile): _description_
-
-        Returns:
-            _type_: _description_
+            level_logic (ArsFile): ARS file to update
+            location_data (AilFile): AIL file to update
+            text_data (AitFile): AIT file to update
+            template_root (Path): Root directory for template files
+            construction_manager (ConstructionManager): Construction manager to use
         """
-        return self._update_mission_logic(ars_data=ars_data)
+        return self._update_mission_logic(
+            level_logic=level_logic,
+            location_data=location_data,
+            text_data=text_data,
+            template_root=template_root,
+            construction_manager=construction_manager,
+        )
 
     @property
     def max_objects(self) -> int:
@@ -187,5 +208,12 @@ class Zone(ABC):
         pass
 
     @abstractmethod
-    def _update_mission_logic(self, ars_data: "ArsFile") -> None:
+    def _update_mission_logic(
+        self,
+        level_logic: ArsFile,
+        location_data: AilFile,
+        text_data: AitFile,
+        template_root: Path,
+        construction_manager: ConstructionManager,
+    ) -> None:
         pass

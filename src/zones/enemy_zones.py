@@ -6,6 +6,15 @@ zones.enemy_zones.py
 Contains details on zones for enemy bases
 """
 
+from logger import get_logger
+
+logger = get_logger()
+
+
+from fileio.ars import ArsFile
+from fileio.ail import AilFile
+from fileio.ait import AitFile
+from construction import ConstructionManager
 import numpy as np
 from models import ZoneType, ZoneSubType
 from zones.base_zone import Zone, ZoneObjectDetails
@@ -16,6 +25,7 @@ from object_containers import (
     PUMP_OUTPOST_ALL,
     PUMP_OUTPOST_PRIORITY,
 )
+from pathlib import Path
 
 
 class GenericBaseZone(Zone):
@@ -42,8 +52,15 @@ class GenericBaseZone(Zone):
     def _mask(self) -> np.ndarray:
         pass
 
-    def _update_mission_logic(self, ars_data: "ArsFile") -> None:
-        pass
+    def _update_mission_logic(
+        self,
+        level_logic: ArsFile,
+        location_data: AilFile,
+        text_data: AitFile,
+        template_root: Path,
+        construction_manager: ConstructionManager,
+    ) -> None:
+        pass  # no special logic required for this zone
 
 
 class PumpOutpostZone(Zone):
@@ -66,5 +83,12 @@ class PumpOutpostZone(Zone):
     def _mask(self) -> np.ndarray:
         pass
 
-    def _update_mission_logic(self, ars_data: "ArsFile") -> None:
-        pass
+    def _update_mission_logic(
+        self,
+        level_logic: ArsFile,
+        location_data: AilFile,
+        text_data: AitFile,
+        template_root: Path,
+        construction_manager: ConstructionManager,
+    ) -> None:
+        pass  # no special logic required for this zone

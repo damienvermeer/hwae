@@ -228,41 +228,13 @@ def generate_new_map(
     # STEP 13 - FINALISE SCRIPT/TRIGGERS -------------------------------------------------------
     progress_callback("Finalizing scripts and triggers")
     logger.info("Finalizing scripts and triggers")
-    weapon_zone = [
-        x for x in object_handler.zones if x.zone_subtype == ZoneSubType.WEAPON_CRATE
-    ]
-    if weapon_zone:
-        logger.info("Setting up weapon crate zone")
-        weapon_zone = weapon_zone[0]
-        ars_data.load_additional_data(
-            template_root / "zone_specific" / "weapon_crate.ars"
-        )
-        # update ait so we dont get unlinked text
-        ait_data.add_text_record(
-            name="hwae_weapon_crate__sample_crate",
-            content="[Optional] Sample the weapon crate",
-        )
-        spare_weapon = construction_manager.find_weapon_not_in_ars_build()
-        if spare_weapon is not None:
-            logger.info(f"Adding spare weapon: {spare_weapon}")
-            ars_data.add_action_to_existing_record(
-                record_name="HWAE_zone_specific weapon ready",
-                action_title="AIScript_MakeAvailableForBuilding",
-                action_details=[
-                    "AIS_SPECIFICPLAYER : 0",
-                    f"AIS_UNITTYPE_SPECIFIC : {spare_weapon}",
-                ],
-            )
-        # update the ail file - get the info from the crate zone
-        zone_x, zone_z = weapon_zone.x, weapon_zone.z
-        ail_data.add_area_record(
-            name="near_crate_zone",
-            bounding_box=(zone_z - 30, zone_x - 30, zone_z + 30, zone_x + 30),
-        )
-        # update ait so we dont get unlinked text
-        ait_data.add_text_record(
-            name="hwae_weapon_crate__weapon_ready_in",
-            content=f"New weapon ({spare_weapon}) ready in:",
+    for zone in object_handler.zones:
+        zone.update_mission_logic(
+            level_logic=ars_data,
+            location_data=ail_data,
+            text_data=ait_data,
+            template_root=template_root,
+            construction_manager=construction_manager,
         )
 
     # STEP 14 - SAVE -------------------------------------------------------
