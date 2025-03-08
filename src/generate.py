@@ -23,7 +23,7 @@ from objects import ObjectHandler
 from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
-from zones import ZoneManager, ZoneType, ZoneSize, ZoneSubType
+from zone_manager import ZoneManager, ZoneType, ZoneSize, ZoneSubType
 from constants import NEW_LEVEL_NAME
 from paths import get_templates_path, get_textures_path
 from logger import setup_logger, close_logger
@@ -177,7 +177,7 @@ def generate_new_map(
     for zone in object_handler.zones:
         terrain_handler.apply_texture_based_on_zone(zone)
         terrain_handler.flatten_terrain_based_on_zone(zone)
-        object_handler.populate_zone(zone)
+        zone.populate(noise_generator, object_handler)
 
     # STEP 10 - MISC OBJECTS -------------------------------------------------------
     progress_callback("Adding other objects...")

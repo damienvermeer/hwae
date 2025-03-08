@@ -8,6 +8,8 @@ Contains all info regarding objects for the level
 
 from logger import get_logger
 
+from zone_manager import ZoneManager
+
 logger = get_logger()
 
 from dataclasses import dataclass
@@ -26,23 +28,11 @@ from models import (
     ZoneMarker,
     ObjectContainer,
     ZoneSubType,
-    ZONE_SIZE_TO_NUM_OBJECTS,
 )
 from terrain import TerrainHandler
 
 # Import object containers after all other imports to prevent circular dependencies
 from object_containers import (
-    PUMP_OUTPOST_PRIORITY,
-    PUMP_OUTPOST_ALL,
-    BASE_PRIORITY1,
-    BASE_PRIORITY2,
-    BASE_ALL_OTHER,
-    DESTROYED_BASE_PRIORITY,
-    SCRAP_DESTROYED_BASE,
-    SCRAP_BATTLE,
-    SCRAP_FUEL_TANKS,
-    WEAPON_CRATE_SCRAP_PRIORITY,
-    WEAPON_CRATE_SCRAP_OTHERS,
     TEMPLATE_ALIEN_AA,
     TEMPLATE_ALIEN_RADAR,
 )
@@ -216,6 +206,9 @@ class ObjectHandler:
         Returns:
             np.ndarray: Zone mask where 0 is occupied and 1 is free
         """
+        # WIP refactoring ZoneMarker to Zone
+        # if hasattr(zone, "mask"):
+        #     return zone.mask()
         return self.get_inclusion_mask_at_location(zone.x, zone.z, zone.radius)
 
     def get_inclusion_mask_at_location(self, x: int, z: int, radius: int) -> np.ndarray:
@@ -703,6 +696,7 @@ class ObjectHandler:
 
     def add_zone(
         self,
+        zone_manager: "ZoneManager",
         zone_type: ZoneType,
         zone_size: ZoneSize,
         zone_subtype: ZoneSubType,
@@ -727,10 +721,8 @@ class ObjectHandler:
         current_size = zone_size
 
         while current_size >= ZoneSize.TINY:
-            # create zone marker object with current size
-            new_zone = ZoneMarker(
-                x=0,
-                z=0,
+            # create zone  object with current size
+            new_zone = zone_manager.create_zone(
                 zone_type=zone_type,
                 zone_size=current_size,
                 zone_subtype=zone_subtype,
@@ -769,104 +761,6 @@ class ObjectHandler:
             f"Could not find location for zone {zone_type} {zone_size} {zone_subtype} even at smallest size"
         )
         return None
-
-    def populate_zone(self, zone: ZoneMarker) -> None:
-        """Populates a zone with objects based on the zone type and size.
-
-        Args:
-            zone (ZoneMarker): Zone to populate
-        """
-        # get the probability list from models for the zone type
-        logger.info("Populating zone: " + str(zone))
-        # look up how many objects to add to the zone, based on its size
-        num_objects = ZONE_SIZE_TO_NUM_OBJECTS[zone.zone_size]
-        # iterate through zones
-        p1_object_dict = {}  # select these first
-        p1_num = 0  # how many to select
-        p2_object_dict = {}  # then select these
-        p2_num = 0  # how many to select
-        all_other_object_dict = {}  # then fill with the objs here
-        z_t = zone.zone_type
-        z_s = zone.zone_subtype
-
-        if z_t == ZoneType.SCRAP and z_s == ZoneSubType.DESTROYED_BASE:
-            # no priority dict - burnt out building
-            p1_object_dict = DESTROYED_BASE_PRIORITY
-            p1_num = 1
-            all_other_object_dict = SCRAP_DESTROYED_BASE
-        if z_t == ZoneType.SCRAP and z_s == ZoneSubType.OLD_TANK_BATTLE:
-            # default - just general scrap
-            all_other_object_dict = SCRAP_BATTLE
-        elif z_t == ZoneType.SCRAP and z_s == ZoneSubType.FUEL_TANKS:
-            # default - just general scrap
-            all_other_object_dict = SCRAP_FUEL_TANKS
-        elif z_t == ZoneType.SCRAP and z_s == ZoneSubType.WEAPON_CRATE:
-            p1_object_dict = WEAPON_CRATE_SCRAP_PRIORITY
-            p1_num = 3
-            all_other_object_dict = WEAPON_CRATE_SCRAP_OTHERS
-        elif z_t == ZoneType.BASE and z_s == ZoneSubType.PUMP_OUTPOST:
-            # get at least 4 oil pumps
-            p1_object_dict = PUMP_OUTPOST_PRIORITY
-            p1_num = 4
-            # then fill from the generic list for others
-            all_other_object_dict = PUMP_OUTPOST_ALL
-        elif z_t == ZoneType.BASE and z_s == ZoneSubType.GENERIC_BASE:
-            # at least one production / command building (SCALES WITH SIZE)
-            p1_object_dict = BASE_PRIORITY1
-            p1_num = 1 * zone.zone_size.value
-            # then at least two power stores
-            p2_object_dict = BASE_PRIORITY2
-            p2_num = 2
-            # then fill from the generic list for others
-            all_other_object_dict = BASE_ALL_OTHER
-        else:
-            logger.info(
-                f"No default case for zone type {zone.zone_type} and special {zone.zone_subtype}"
-            )
-
-        # NOW implement
-        priority_1_objs = [
-            self.noise_generator.select_random_from_weighted_dict(p1_object_dict)
-            for _ in range(p1_num)
-        ]
-        priority_2_objs = [
-            self.noise_generator.select_random_from_weighted_dict(p2_object_dict)
-            for _ in range(p2_num)
-        ]
-        all_base_objs = [
-            self.noise_generator.select_random_from_weighted_dict(all_other_object_dict)
-            for _ in range(num_objects - p1_num - p2_num)
-        ]
-
-        # put them in the zone, after sorting descending by radius
-        def _get_required_radius(
-            obj: ObjectContainer | tuple[ObjectContainer, ...]
-        ) -> int:
-            if isinstance(obj, tuple):
-                return obj[0].required_radius
-            else:
-                return obj.required_radius
-
-        priority_1_objs.sort(key=lambda x: _get_required_radius(x), reverse=True)
-        priority_2_objs.sort(key=lambda x: _get_required_radius(x), reverse=True)
-        all_base_objs.sort(key=lambda x: _get_required_radius(x), reverse=True)
-        for obj in priority_1_objs + priority_2_objs + all_base_objs:
-            # check if obj is a list (template) or a single object
-            if isinstance(obj, tuple):
-                self.add_object_template_on_land_random(
-                    obj, in_zone=zone, team_override=zone.zone_index
-                )
-            else:
-                self.add_object_on_land_random(
-                    obj.object_type,
-                    attachment_type=obj.attachment_type,
-                    team=obj.team if zone.zone_index is None else zone.zone_index,
-                    required_radius=obj.required_radius,
-                    y_rotation=self.noise_generator.randint(0, 360),
-                    y_offset=obj.y_offset,
-                    in_zone=zone,
-                )
-        logger.info("Populating zone: " + str(zone) + " completed")
 
     def create_patrol_points(self, n_points: int = 3) -> None:
         """Generates a patrol of n_points
