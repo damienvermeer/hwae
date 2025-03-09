@@ -29,6 +29,14 @@ AVAILABLE_VEHCILES = [
     "Bomber",
     "Superhover",
 ]
+OFFENSIVE_VEHICLES = [
+    "chopper",
+    "HeavyTank",
+    "Supertank",
+    "Superchopper",
+    "Hovertank",
+    "Superhover",
+]
 AVAILABLE_SOULCATCHERS = [
     # always picks at least 6
     "Ransom",
@@ -74,19 +82,26 @@ class ConstructionManager:
     map_config: MapConfig
 
     def _select_random_vehicles(self) -> None:
-        picked_sublist = self.noise_generator.select_random_sublist_from_list(
-            AVAILABLE_VEHCILES, min_n=2
+        # updated so that it always picks at least one offensive vehicle
+        picked_vehicles = self.noise_generator.select_random_sublist_from_list(
+            OFFENSIVE_VEHICLES, min_n=1, max_n=1
+        )
+        # Then potentially add more vehicles
+        picked_vehicles.extend(
+            self.noise_generator.select_random_sublist_from_list(
+                AVAILABLE_VEHCILES, min_n=0
+            )
         )
         for extra_vehicle in self.map_config.vehicle_include_list:
             logger.info(f"Adding extra vehicle: {extra_vehicle} as requested by config")
             if (
-                extra_vehicle in picked_sublist
+                extra_vehicle in picked_vehicles
                 or extra_vehicle not in AVAILABLE_VEHCILES
             ):
                 logger.info(f"Vehicle {extra_vehicle} skipped")
                 continue
-            picked_sublist.append(extra_vehicle)
-        for vehicle in picked_sublist:
+            picked_vehicles.append(extra_vehicle)
+        for vehicle in picked_vehicles:
             self.ars_file.add_action_to_existing_record(
                 record_name="BUILD_SETUP",
                 action_title="AIScript_MakeAvailableForBuilding",
@@ -95,7 +110,7 @@ class ConstructionManager:
                     f"AIS_UNITTYPE_SPECIFIC : {vehicle}",
                 ],
             )
-        logger.info(f"Added {len(picked_sublist)} vehicles")
+        logger.info(f"Added {len(picked_vehicles)} vehicles")
 
     def _select_random_soulcatchers(self) -> None:
         picked_soulcatchers = self.noise_generator.select_random_sublist_from_list(

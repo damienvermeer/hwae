@@ -23,9 +23,9 @@ from objects import ObjectHandler
 from terrain import TerrainHandler
 from texture import select_map_texture_group
 from minimap import generate_minimap
-from zones import ZoneManager, ZoneType, ZoneSize, ZoneSubType
+from zone_manager import ZoneManager, ZoneType, ZoneSize, ZoneSubType
 from constants import NEW_LEVEL_NAME
-from paths import get_templates_path, get_textures_path
+from paths import get_assets_path, get_templates_path, get_textures_path
 from logger import setup_logger, close_logger
 from config_loader import load_config, MapConfig
 
@@ -70,6 +70,7 @@ def generate_new_map(
     # Use map size from config
     map_size_template = "large"  # CURRENTLY NO OTHER SUPPORTED
     template_root = get_templates_path()
+    zonegen_root = get_assets_path() / "zonegen"
     texture_root = get_textures_path()
 
     # STEP 2 - CLEAN EXISTING FILES ----------------------------------------------------
@@ -135,7 +136,7 @@ def generate_new_map(
     # STEP 6 - ZONE MANAGER -------------------------------------------------------
     progress_callback("Creating default zones")
     logger.info("Creating zone manager")
-    zone_manager = ZoneManager(object_handler, noise_generator)
+    zone_manager = ZoneManager(object_handler, noise_generator, zonegen_root)
 
     # starting scrap
     xr, zr = zone_manager.add_tiny_scrap_near_carrier_and_calc_rally(carrier_mask)
@@ -177,7 +178,7 @@ def generate_new_map(
     for zone in object_handler.zones:
         terrain_handler.apply_texture_based_on_zone(zone)
         terrain_handler.flatten_terrain_based_on_zone(zone)
-        object_handler.populate_zone(zone)
+        zone.populate(noise_generator, object_handler)
 
     # STEP 10 - MISC OBJECTS -------------------------------------------------------
     progress_callback("Adding other objects...")
@@ -228,41 +229,13 @@ def generate_new_map(
     # STEP 13 - FINALISE SCRIPT/TRIGGERS -------------------------------------------------------
     progress_callback("Finalizing scripts and triggers")
     logger.info("Finalizing scripts and triggers")
-    weapon_zone = [
-        x for x in object_handler.zones if x.zone_subtype == ZoneSubType.WEAPON_CRATE
-    ]
-    if weapon_zone:
-        logger.info("Setting up weapon crate zone")
-        weapon_zone = weapon_zone[0]
-        ars_data.load_additional_data(
-            template_root / "zone_specific" / "weapon_crate.ars"
-        )
-        # update ait so we dont get unlinked text
-        ait_data.add_text_record(
-            name="hwae_weapon_crate__sample_crate",
-            content="[Optional] Sample the weapon crate",
-        )
-        spare_weapon = construction_manager.find_weapon_not_in_ars_build()
-        if spare_weapon is not None:
-            logger.info(f"Adding spare weapon: {spare_weapon}")
-            ars_data.add_action_to_existing_record(
-                record_name="HWAE_zone_specific weapon ready",
-                action_title="AIScript_MakeAvailableForBuilding",
-                action_details=[
-                    "AIS_SPECIFICPLAYER : 0",
-                    f"AIS_UNITTYPE_SPECIFIC : {spare_weapon}",
-                ],
-            )
-        # update the ail file - get the info from the crate zone
-        zone_x, zone_z = weapon_zone.x, weapon_zone.z
-        ail_data.add_area_record(
-            name="near_crate_zone",
-            bounding_box=(zone_z - 30, zone_x - 30, zone_z + 30, zone_x + 30),
-        )
-        # update ait so we dont get unlinked text
-        ait_data.add_text_record(
-            name="hwae_weapon_crate__weapon_ready_in",
-            content=f"New weapon ({spare_weapon}) ready in:",
+    for zone in object_handler.zones:
+        zone.update_mission_logic(
+            level_logic=ars_data,
+            location_data=ail_data,
+            text_data=ait_data,
+            template_root=template_root,
+            construction_manager=construction_manager,
         )
 
     # STEP 14 - SAVE -------------------------------------------------------
