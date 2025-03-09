@@ -14,6 +14,7 @@ from pathlib import Path
 
 from logger import get_logger
 from paths import get_assets_path
+from constants import VERSION_STR
 
 logger = get_logger()
 
@@ -31,6 +32,7 @@ class MapConfig:
     addon_include_list: List[str] = field(default_factory=list)
     vehicle_include_list: List[str] = field(default_factory=list)
     starting_ej: int = -1
+    created_version: str = VERSION_STR
 
     @classmethod
     def from_json(cls, json_path: Union[str, Path]) -> "MapConfig":
@@ -47,6 +49,15 @@ class MapConfig:
                 config_data = json.load(f)
 
             logger.info(f"Loaded configuration from {json_path}")
+
+            # check version and warn in log
+            if config_data.get("created_version", "") != VERSION_STR:
+                logger.warning(
+                    f"Configuration file version {config_data['created_version']} does "
+                    f"not match current version {VERSION_STR}. The generated map may "
+                    "be different between this version"
+                )
+
             return cls(**config_data)
         except FileNotFoundError:
             logger.info(f"Configuration file not found at {json_path}, using defaults")

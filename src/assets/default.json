@@ -6,5 +6,6 @@
     "weapon_include_list": [],
     "addon_include_list": [],
     "vehicle_include_list": [],
-    "starting_ej": -1
+    "starting_ej": -1,
+    "created_version": "1.1.0"
 }
