@@ -13,8 +13,16 @@ from typing import Union
 
 logger = get_logger()
 
+from zones.base_zone import Zone
+from zones.scrap_zones import (
+    DestroyedBaseZone,
+    OldTankBattleZone,
+    OilTankZone,
+    WeaponCrateZone,
+)
+from zones.enemy_zones import GenericBaseZone, PumpOutpostZone
+from pathlib import Path
 from noisegen import NoiseGenerator
-from objects import ObjectHandler
 from models import ZoneSubType, ZoneSize, ZoneType, ZONE_SIZE_TO_RADIUS
 
 ZONE_TYPE_WEIGHTS = {
@@ -92,8 +100,9 @@ PUMP_ZONES_PER_BASE_ZONE = {
 
 @dataclass
 class ZoneManager:
-    object_handler: ObjectHandler
+    object_handler: "ObjectHandler"
     noise_generator: NoiseGenerator
+    zonegen_root: Path
     # NOTE - zones themselves live in object manager
     special_zones_allocated = []
     last_used_index = 1
@@ -159,7 +168,7 @@ class ZoneManager:
         for zone_to_add in [
             x for x in _zones_to_place if x[2] != ZoneSubType.PUMP_OUTPOST
         ]:
-            zone = self.object_handler.add_zone(*zone_to_add)
+            zone = self.object_handler.add_zone(self, *zone_to_add)
             if zone is None:
                 logger.warning(f"Failed to add zone {zone_to_add}")
 
@@ -178,6 +187,7 @@ class ZoneManager:
             base_zone = base_zones[0]
             # and add a pump zone within a radius of the base zone
             zone = self.object_handler.add_zone(
+                self,
                 *zone_to_add,
                 extra_masks=self.object_handler.get_inclusion_mask_at_location(
                     base_zone.x, base_zone.z, 40
@@ -206,9 +216,10 @@ class ZoneManager:
         # update the allowed max subtype zones to have 1 fewer
         ALLOWED_MAX_SUBTYPE_ZONES[ZoneType.SCRAP][zone_subtype] -= 1
         zone = self.object_handler.add_zone(
-            ZoneType.SCRAP,
-            ZoneSize.TINY,
-            zone_subtype,
+            zone_manager=self,
+            zone_type=ZoneType.SCRAP,
+            zone_size=ZoneSize.TINY,
+            zone_subtype=zone_subtype,
             extra_masks=carrier_mask,
         )
 
@@ -231,3 +242,58 @@ class ZoneManager:
             extra_masks=nearby_scrap_mask,
         )
         return x, z
+
+    def create_zone(
+        self,
+        zone_type: ZoneType,
+        zone_size: ZoneSize,
+        zone_subtype: ZoneSubType,
+        zone_index: Union[int, None] = None,
+        terrain_width: int = 0,
+        terrain_length: int = 0,
+    ) -> Zone:
+        """Creates a new Zone object and returns it.
+
+        Args:
+            zone_type (ZoneType): Type of zone to create
+            zone_size (ZoneSize): Size of zone to create
+            zone_subtype (ZoneSubType): Subtype of zone to create
+            zone_index (Union[int, None], optional): Index of zone to create. Defaults to None.
+            terrain_width (int, optional): Width of terrain. Defaults to 0.
+            terrain_length (int, optional): Length of terrain. Defaults to 0.
+
+        Returns:
+            Zone: Zone object created
+        """
+        common_kwargs = {
+            "x": 0,
+            "z": 0,
+            "zone_size": zone_size,
+            "zone_index": zone_index,
+            "terrain_max_width": terrain_width,
+            "terrain_max_length": terrain_length,
+            "zonegen_root": self.zonegen_root,
+            "noise_generator": self.noise_generator,
+        }
+        # check which type of zone it is
+        z_t = zone_type
+        z_s = zone_subtype
+        # SCRAP ZONES
+        if z_t == ZoneType.SCRAP:
+            if z_s == ZoneSubType.DESTROYED_BASE:
+                return DestroyedBaseZone(**common_kwargs)
+            if z_s == ZoneSubType.OLD_TANK_BATTLE:
+                return OldTankBattleZone(**common_kwargs)
+            if z_s == ZoneSubType.FUEL_TANKS:
+                return OilTankZone(**common_kwargs)
+            if z_s == ZoneSubType.WEAPON_CRATE:
+                return WeaponCrateZone(**common_kwargs)
+
+        # ENEMY ZONES
+        if z_t == ZoneType.BASE:
+            if z_s == ZoneSubType.GENERIC_BASE:
+                return GenericBaseZone(**common_kwargs)
+            if z_s == ZoneSubType.PUMP_OUTPOST:
+                return PumpOutpostZone(**common_kwargs)
+
+        raise ValueError(f"Invalid zone type: {z_t} or zone subtype: {z_s}")
