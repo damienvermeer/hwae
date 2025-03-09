@@ -21,7 +21,7 @@ from zones.scrap_zones import (
     WeaponCrateZone,
 )
 from zones.enemy_zones import GenericBaseZone, PumpOutpostZone
-
+from pathlib import Path
 from noisegen import NoiseGenerator
 from models import ZoneSubType, ZoneSize, ZoneType, ZONE_SIZE_TO_RADIUS
 
@@ -102,6 +102,7 @@ PUMP_ZONES_PER_BASE_ZONE = {
 class ZoneManager:
     object_handler: "ObjectHandler"
     noise_generator: NoiseGenerator
+    zonegen_root: Path
     # NOTE - zones themselves live in object manager
     special_zones_allocated = []
     last_used_index = 1
@@ -248,6 +249,8 @@ class ZoneManager:
         zone_size: ZoneSize,
         zone_subtype: ZoneSubType,
         zone_index: Union[int, None] = None,
+        terrain_width: int = 0,
+        terrain_length: int = 0,
     ) -> Zone:
         """Creates a new Zone object and returns it.
 
@@ -256,60 +259,41 @@ class ZoneManager:
             zone_size (ZoneSize): Size of zone to create
             zone_subtype (ZoneSubType): Subtype of zone to create
             zone_index (Union[int, None], optional): Index of zone to create. Defaults to None.
+            terrain_width (int, optional): Width of terrain. Defaults to 0.
+            terrain_length (int, optional): Length of terrain. Defaults to 0.
 
         Returns:
             Zone: Zone object created
         """
+        common_kwargs = {
+            "x": 0,
+            "z": 0,
+            "zone_size": zone_size,
+            "zone_index": zone_index,
+            "terrain_max_width": terrain_width,
+            "terrain_max_length": terrain_length,
+            "zonegen_root": self.zonegen_root,
+            "noise_generator": self.noise_generator,
+        }
         # check which type of zone it is
         z_t = zone_type
         z_s = zone_subtype
-
         # SCRAP ZONES
         if z_t == ZoneType.SCRAP:
             if z_s == ZoneSubType.DESTROYED_BASE:
-                return DestroyedBaseZone(
-                    x=0,
-                    z=0,
-                    zone_size=zone_size,
-                    zone_index=zone_index,
-                )
+                return DestroyedBaseZone(**common_kwargs)
             if z_s == ZoneSubType.OLD_TANK_BATTLE:
-                return OldTankBattleZone(
-                    x=0,
-                    z=0,
-                    zone_size=zone_size,
-                    zone_index=zone_index,
-                )
+                return OldTankBattleZone(**common_kwargs)
             if z_s == ZoneSubType.FUEL_TANKS:
-                return OilTankZone(
-                    x=0,
-                    z=0,
-                    zone_size=zone_size,
-                    zone_index=zone_index,
-                )
+                return OilTankZone(**common_kwargs)
             if z_s == ZoneSubType.WEAPON_CRATE:
-                return WeaponCrateZone(
-                    x=0,
-                    z=0,
-                    zone_size=zone_size,
-                    zone_index=zone_index,
-                )
+                return WeaponCrateZone(**common_kwargs)
 
         # ENEMY ZONES
         if z_t == ZoneType.BASE:
             if z_s == ZoneSubType.GENERIC_BASE:
-                return GenericBaseZone(
-                    x=0,
-                    z=0,
-                    zone_size=zone_size,
-                    zone_index=zone_index,
-                )
+                return GenericBaseZone(**common_kwargs)
             if z_s == ZoneSubType.PUMP_OUTPOST:
-                return PumpOutpostZone(
-                    x=0,
-                    z=0,
-                    zone_size=zone_size,
-                    zone_index=zone_index,
-                )
+                return PumpOutpostZone(**common_kwargs)
 
         raise ValueError(f"Invalid zone type: {z_t} or zone subtype: {z_s}")

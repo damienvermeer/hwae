@@ -206,10 +206,7 @@ class ObjectHandler:
         Returns:
             np.ndarray: Zone mask where 0 is occupied and 1 is free
         """
-        # WIP refactoring ZoneMarker to Zone
-        # if hasattr(zone, "mask"):
-        #     return zone.mask()
-        return self.get_inclusion_mask_at_location(zone.x, zone.z, zone.radius)
+        return zone.mask()
 
     def get_inclusion_mask_at_location(self, x: int, z: int, radius: int) -> np.ndarray:
         """Returns a mask where 0 is free space and 1 is occupied space, at a
@@ -280,7 +277,7 @@ class ObjectHandler:
             for z in range(self.terrain_handler.length):
                 if self.terrain_handler.get_height(x, z) > cutoff_height:
                     mask[x, z] = 1
-        # setback everything radius 2 from the edge - to avoid things appearing
+        # setback everything radius 6 from the edge - to avoid things appearing
         # ... awkwardly on the edge of a cliff etc
         binary_terrain = self.terrain_handler._get_height_2d_array().copy()
         binary_terrain[binary_terrain < 0] = 0
@@ -289,7 +286,7 @@ class ObjectHandler:
         for x in range(self.terrain_handler.width):
             for z in range(self.terrain_handler.length):
                 if edge_mask[x, z] == 1:
-                    mask = self._update_mask_grid_with_radius(mask, x, z, 2, set_to=1)
+                    mask = self._update_mask_grid_with_radius(mask, x, z, 6, set_to=1)
         return mask
 
     def _get_water_mask(self, cutoff_height=-20) -> np.ndarray:
@@ -727,6 +724,8 @@ class ObjectHandler:
                 zone_size=current_size,
                 zone_subtype=zone_subtype,
                 zone_index=zone_index,
+                terrain_width=self.terrain_handler.width,
+                terrain_length=self.terrain_handler.length,
             )
 
             # find a land location we can place the radius zone at (with some buffer)

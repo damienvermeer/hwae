@@ -25,7 +25,7 @@ from texture import select_map_texture_group
 from minimap import generate_minimap
 from zone_manager import ZoneManager, ZoneType, ZoneSize, ZoneSubType
 from constants import NEW_LEVEL_NAME
-from paths import get_templates_path, get_textures_path
+from paths import get_assets_path, get_templates_path, get_textures_path
 from logger import setup_logger, close_logger
 from config_loader import load_config, MapConfig
 
@@ -70,6 +70,7 @@ def generate_new_map(
     # Use map size from config
     map_size_template = "large"  # CURRENTLY NO OTHER SUPPORTED
     template_root = get_templates_path()
+    zonegen_root = get_assets_path() / "zonegen"
     texture_root = get_textures_path()
 
     # STEP 2 - CLEAN EXISTING FILES ----------------------------------------------------
@@ -135,7 +136,7 @@ def generate_new_map(
     # STEP 6 - ZONE MANAGER -------------------------------------------------------
     progress_callback("Creating default zones")
     logger.info("Creating zone manager")
-    zone_manager = ZoneManager(object_handler, noise_generator)
+    zone_manager = ZoneManager(object_handler, noise_generator, zonegen_root)
 
     # starting scrap
     xr, zr = zone_manager.add_tiny_scrap_near_carrier_and_calc_rally(carrier_mask)

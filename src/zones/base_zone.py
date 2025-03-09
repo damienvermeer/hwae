@@ -18,7 +18,7 @@ from fileio.ail import AilFile
 from fileio.ait import AitFile
 from construction import ConstructionManager
 from pathlib import Path
-
+from PIL import Image
 
 from noisegen import NoiseGenerator
 from models import (
@@ -60,13 +60,21 @@ class Zone(ABC):
 
     x: float
     z: float
+    terrain_max_width: int
+    terrain_max_length: int
     zone_size: ZoneSize
+    zonegen_root: Path
+    terrain_max_width: int
+    terrain_max_length: int
+    noise_generator: NoiseGenerator
     zone_index: Union[int, None] = None  # used for enemy team grouping
 
     def __post_init__(self) -> None:
         """Below are overriden by child classes"""
         self.zone_type: ZoneType = None
         self.zone_subtype: ZoneSubType = None
+        self.zone_subtype: ZoneSubType = None
+        self._mask: np.ndarray | None = None
 
     def __repr__(self) -> str:
         return f"Zone(zone_type={self.zone_type}, zone_size={self.zone_size}, zone_subtype={self.zone_subtype}, zone_index={self.zone_index}, x={self.x}, z={self.z})"
@@ -100,7 +108,86 @@ class Zone(ABC):
         return ZONE_TYPE_TO_TEXTURE_ID[self.zone_type]
 
     def mask(self) -> np.ndarray:
-        return self._mask()
+        """Returns (and if not created, generates) a permissive mask for this zone.
+
+        Returns:
+            np.ndarray: A permissive mask for this zone
+        """
+        if self._mask is not None:
+            return self._mask
+        # else we need to calculate it
+        # start with a full 0 mask of the terrain
+        self._mask = np.zeros(
+            (
+                self.terrain_max_width,
+                self.terrain_max_length,
+            )
+        )
+        # call the child class's method to get a list of acceptable mask files
+        mask_files = self._get_acceptable_mask_files(self.zonegen_root)
+        # pick one at random
+        mask_file = self.noise_generator.select_random_from_list(mask_files)
+        # load the mask file and rescale based on zone size
+        logger.info(f"Selected zone mask template: {mask_file}")
+
+        with Image.open(mask_file) as fimg:
+            # rotate by a random angle
+            angle = self.noise_generator.randint(0, 360)
+            logger.info(f"Rotating template by {angle} degrees")
+            img = fimg.rotate(angle, Image.NEAREST, expand=True)
+            # normalize to [0,1] and then clip anything greater than 0.1 to 1
+            img = img.convert("L")
+            img_array = np.array(img) / 255
+            img_array = np.where(img_array > 0.1, 1, 0)
+
+            # resize to match zone dimensions (which for now is radius)
+            radius = ZONE_SIZE_TO_RADIUS[self.zone_size] + 2  # TESTING slight extra
+            mask_size = radius * 2  # diameter
+
+            # Convert to binary image before resizing to maintain binary values
+            binary_img = Image.fromarray((img_array * 255).astype(np.uint8))
+            resized_img = binary_img.resize((mask_size, mask_size))
+            img_resized = np.array(resized_img) / 255
+
+            # Ensure binary values after resize (threshold again)
+            img_resized = np.where(img_resized > 0.1, 1, 0)
+
+            # Calculate the position to place the mask in the terrain grid
+            # Convert x,z coordinates to grid indices
+            center_x, center_z = int(self.x), int(self.z)
+
+            # Calculate the bounds for placing the mask
+            x_start = max(0, center_x - mask_size // 2)
+            z_start = max(0, center_z - mask_size // 2)
+            x_end = min(self.terrain_max_width, center_x + mask_size // 2)
+            z_end = min(self.terrain_max_length, center_z + mask_size // 2)
+
+            # Calculate the corresponding region in the mask image
+            mask_x_start = max(0, -(center_x - mask_size // 2))
+            mask_z_start = max(0, -(center_z - mask_size // 2))
+            mask_x_end = mask_x_start + (x_end - x_start)
+            mask_z_end = mask_z_start + (z_end - z_start)
+
+            # Place the mask in the terrain grid
+            if (
+                x_end > x_start
+                and z_end > z_start
+                and mask_x_end > mask_x_start
+                and mask_z_end > mask_z_start
+            ):
+                mask_section = img_resized[
+                    mask_x_start:mask_x_end, mask_z_start:mask_z_end
+                ]
+                self._mask[x_start:x_end, z_start:z_end] = mask_section
+
+                # Final check to ensure binary values
+                self._mask = np.where(self._mask > 0.1, 1, 0)
+
+            logger.info(
+                f"Placed zone mask at position ({center_x}, {center_z}) with radius {radius}"
+            )
+
+        return self._mask
 
     def update_mission_logic(
         self,
@@ -204,7 +291,7 @@ class Zone(ABC):
         pass
 
     @abstractmethod
-    def _mask(self) -> np.ndarray:
+    def _get_acceptable_mask_files(self, zonegen_root: Path) -> list[Path]:
         pass
 
     @abstractmethod

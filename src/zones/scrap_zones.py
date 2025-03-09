@@ -47,8 +47,8 @@ class DestroyedBaseZone(Zone):
         )
         return new_details
 
-    def _mask(self) -> np.ndarray:
-        pass
+    def _get_acceptable_mask_files(self, zonegen_root: Path) -> list[Path]:
+        return list((zonegen_root / "scrap").glob("*.png"))
 
     def _update_mission_logic(
         self,
@@ -76,8 +76,8 @@ class OldTankBattleZone(Zone):
         )
         return new_details
 
-    def _mask(self) -> np.ndarray:
-        pass
+    def _get_acceptable_mask_files(self, zonegen_root: Path) -> list[Path]:
+        return list((zonegen_root / "scrap").glob("*.png"))
 
     def _update_mission_logic(
         self,
@@ -106,8 +106,8 @@ class OilTankZone(Zone):
         )
         return new_details
 
-    def _mask(self) -> np.ndarray:
-        pass
+    def _get_acceptable_mask_files(self, zonegen_root: Path) -> list[Path]:
+        return list((zonegen_root / "scrap").glob("*.png"))
 
     def _update_mission_logic(
         self,
@@ -139,8 +139,8 @@ class WeaponCrateZone(Zone):
         )
         return new_details
 
-    def _mask(self) -> np.ndarray:
-        pass
+    def _get_acceptable_mask_files(self, zonegen_root: Path) -> list[Path]:
+        return list((zonegen_root / "scrap").glob("*.png"))
 
     def _update_mission_logic(
         self,

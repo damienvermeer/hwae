@@ -49,8 +49,8 @@ class GenericBaseZone(Zone):
         )
         return new_details
 
-    def _mask(self) -> np.ndarray:
-        pass
+    def _get_acceptable_mask_files(self, zonegen_root: Path) -> list[Path]:
+        return list((zonegen_root / "enemy_base").glob("*.png"))
 
     def _update_mission_logic(
         self,
@@ -80,8 +80,8 @@ class PumpOutpostZone(Zone):
         )
         return new_details
 
-    def _mask(self) -> np.ndarray:
-        pass
+    def _get_acceptable_mask_files(self, zonegen_root: Path) -> list[Path]:
+        return list((zonegen_root / "enemy_base").glob("*.png"))
 
     def _update_mission_logic(
         self,

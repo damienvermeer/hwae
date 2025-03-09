@@ -284,7 +284,7 @@ BASE_BLAST_TOWER = ObjectContainer(
 BASE_OIL_PUMP = ObjectContainer(
     object_type="ALIENPUMP",
     team=Team.ENEMY,
-    required_radius=2,
+    required_radius=1,
 )
 PUMP_OUTPOST_PRIORITY = {BASE_OIL_PUMP: 1}
 PUMP_OUTPOST_ALL = {
@@ -310,7 +310,7 @@ BASE_GROUND_PROD = ObjectContainer(
 BASE_LARGE_PROD = ObjectContainer(
     object_type="ALIENLARGEPROD",
     team=Team.ENEMY,
-    required_radius=5,
+    required_radius=6,
 )
 BASE_AIR_PROD = ObjectContainer(
     object_type="AlienProdTower",

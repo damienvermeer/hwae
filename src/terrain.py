@@ -18,7 +18,7 @@ import numpy as np
 from fileio.lev import LevFile
 from fileio.ob3 import MAP_SCALER
 from noisegen import NoiseGenerator
-from models import ZoneMarker
+from zones.base_zone import Zone
 
 
 @dataclass
@@ -204,19 +204,19 @@ class TerrainHandler:
 
         logger.info("Terrain generation complete!")
 
-    def apply_texture_based_on_zone(self, zone: ZoneMarker) -> None:
+    def apply_texture_based_on_zone(self, zone: Zone) -> None:
         """Applies the texture with texture_id in the radius defined by the zone
         object (used for setting special textures like pavement/alien blood etc)
 
         Args:
-            zone (ZoneMarker): Zone object defining the radius and texture
+            zone (Zone): Zone object defining the radius and texture
         """
-        # first select all the terrain points which are within a radius of the zone
-        # ... location
-        logger.info("Applying zone texture: Selecting terrain points within radius")
+        # first select all the terrain points which are within the zone's mask
+        logger.info("Applying zone texture: Selecting terrain points mask")
+        zone_mask = zone.mask()
         for x in range(self.width):
             for y in range(self.length):
-                if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
+                if zone_mask[x, y]:
                     # slight chance to use a different texture
                     texture_offset = self.noise_gen.select_random_from_list(
                         [0] * 5 + [1] + [2]
@@ -224,40 +224,80 @@ class TerrainHandler:
                     self.terrain_points[x, y].mat = zone.texture_id + texture_offset
         logger.info("Applying zone texture: Completed")
 
-    def flatten_terrain_based_on_zone(self, zone: ZoneMarker) -> None:
-        """Flattens the terrain based on the zone radius
+    def flatten_terrain_based_on_zone(
+        self, zone: Zone, smooth_radius: int = 10
+    ) -> None:
+        """
+        Flattens and smooths the terrain around a flattened zone using a falloff function.
 
         Args:
-            zone (ZoneMarker): Zone object defining the radius
+            zone (Zone): Zone object defining the mask
+            smooth_radius (int): Radius of smoothing area outside the zone
         """
-        # find the average height of the terrain within the zone
-        logger.info("Zone: Flattening terrain: Finding average height")
+        import numpy as np
+
+        zone_mask = zone.mask()
+        zone_center = (zone.x, zone.z)
+        zone_radius = zone.radius
+
+        # Get the zone's average height
         avg_height = 0
         count = 0
         for x in range(self.width):
             for y in range(self.length):
-                if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
-                    avg_height += self.terrain_points[x, y].height
+                if zone_mask[x, y]:
+                    avg_height += max(60, self.terrain_points[x, y].height)
                     count += 1
-        avg_height /= count
-        # set min height - to avoid spawning things in water
+
+        if count > 0:
+            avg_height /= count
+
+        # Set min height - to avoid spawning things in water
         avg_height = max(avg_height, 60)
-        logger.info("Zone: Flattening terrain: Found average height")
-        # set the height of all points within the zone to the average height
+
+        # Set all points inside the zone to the average height
         for x in range(self.width):
             for y in range(self.length):
-                if (x - zone.x) ** 2 + (y - zone.z) ** 2 <= zone.radius**2:
+                if zone_mask[x, y]:
                     self.terrain_points[x, y].height = avg_height
-        # set all heights for the points 1 extra radius unit outside to the average
-        # .. between their current height and the average height (smoothing)
+
+        # Simple linear falloff around the zone
+        # First identify the boundary points of the zone
+        boundary_points = []
         for x in range(self.width):
             for y in range(self.length):
-                if (
-                    (zone.radius) ** 2
-                    <= (x - zone.x) ** 2 + (y - zone.z) ** 2
-                    <= (zone.radius + 2) ** 2
-                ):
-                    self.terrain_points[x, y].height = np.mean(
-                        [self.terrain_points[x, y].height, avg_height]
+                if zone_mask[x, y]:
+                    # Check if this is a boundary point (has at least one non-zone neighbor)
+                    if ((x > 0 and not zone_mask[x-1, y]) or
+                        (x < self.width-1 and not zone_mask[x+1, y]) or
+                        (y > 0 and not zone_mask[x, y-1]) or
+                        (y < self.length-1 and not zone_mask[x, y+1])):
+                        boundary_points.append((x, y))
+        
+        # Apply falloff to points outside the zone
+        for x in range(self.width):
+            for y in range(self.length):
+                # Skip points inside the zone
+                if zone_mask[x, y]:
+                    continue
+                
+                # Find minimum distance to any boundary point
+                min_dist = smooth_radius + 1
+                for bx, by in boundary_points:
+                    # Use Manhattan distance for simplicity
+                    dist = abs(x - bx) + abs(y - by)
+                    if dist < min_dist:
+                        min_dist = dist
+                
+                # Apply falloff if within smooth_radius
+                if min_dist <= smooth_radius:
+                    # Linear falloff factor
+                    falloff = 1.0 - (min_dist / smooth_radius)
+                    
+                    # Apply linear interpolation
+                    original_height = self.terrain_points[x, y].height
+                    self.terrain_points[x, y].height = (
+                        falloff * avg_height + (1 - falloff) * original_height
                     )
-        logger.info("Zone: Flattening terrain: Completed")
+        
+        logger.info(f"Zone: Flattening terrain: Set zone to height {avg_height} with simple linear falloff")
