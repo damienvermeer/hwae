@@ -286,7 +286,7 @@ class ObjectHandler:
         for x in range(self.terrain_handler.width):
             for z in range(self.terrain_handler.length):
                 if edge_mask[x, z] == 1:
-                    mask = self._update_mask_grid_with_radius(mask, x, z, 6, set_to=1)
+                    mask = self._update_mask_grid_with_radius(mask, x, z, 6, set_to=0)
         return mask
 
     def _get_water_mask(self, cutoff_height=-20) -> np.ndarray:
