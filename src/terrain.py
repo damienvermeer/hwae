@@ -225,7 +225,7 @@ class TerrainHandler:
         logger.info("Applying zone texture: Completed")
 
     def flatten_terrain_based_on_zone(
-        self, zone: Zone, smooth_radius: int = 10
+        self, zone: Zone, all_existing_zones: list[Zone], smooth_radius: int = 10
     ) -> None:
         """
         Flattens and smooths the terrain around a flattened zone using a falloff function.
@@ -234,11 +234,7 @@ class TerrainHandler:
             zone (Zone): Zone object defining the mask
             smooth_radius (int): Radius of smoothing area outside the zone
         """
-        import numpy as np
-
         zone_mask = zone.mask()
-        zone_center = (zone.x, zone.z)
-        zone_radius = zone.radius
 
         # Get the zone's average height
         avg_height = 0
@@ -273,12 +269,19 @@ class TerrainHandler:
                         (y > 0 and not zone_mask[x, y-1]) or
                         (y < self.length-1 and not zone_mask[x, y+1])):
                         boundary_points.append((x, y))
-        
+
+        # issue 6 - get a mask of all existing zones and dont smooth
+        # ... if the point is inside any other zones' mask (to prevent
+        # .... smoothing an adjacent zone). This includes this zone
+        all_zones_mask = np.zeros((self.width, self.length))
+        for zone in all_existing_zones:
+            all_zones_mask += zone.mask()
+
         # Apply falloff to points outside the zone
         for x in range(self.width):
             for y in range(self.length):
-                # Skip points inside the zone
-                if zone_mask[x, y]:
+                # Skip points inside any existing zone
+                if all_zones_mask[x, y]:
                     continue
                 
                 # Find minimum distance to any boundary point

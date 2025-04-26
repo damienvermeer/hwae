@@ -183,7 +183,9 @@ def generate_new_map(
         logger.info("Processing zones (texturing, flattening, populating)")
         for zone in object_handler.zones:
             terrain_handler.apply_texture_based_on_zone(zone)
-            terrain_handler.flatten_terrain_based_on_zone(zone)
+            terrain_handler.flatten_terrain_based_on_zone(
+                zone, all_existing_zones=object_handler.zones
+            )
             zone.populate(noise_generator, object_handler)
 
         # STEP 10 - MISC OBJECTS -------------------------------------------------------
