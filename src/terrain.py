@@ -274,8 +274,8 @@ class TerrainHandler:
         # ... if the point is inside any other zones' mask (to prevent
         # .... smoothing an adjacent zone). This includes this zone
         all_zones_mask = np.zeros((self.width, self.length))
-        for zone in all_existing_zones:
-            all_zones_mask += zone.mask()
+        for other_zone in all_existing_zones:
+            all_zones_mask += other_zone.mask()
 
         # Apply falloff to points outside the zone
         for x in range(self.width):
