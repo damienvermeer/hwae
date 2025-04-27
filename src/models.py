@@ -31,7 +31,7 @@ class ZoneSize(IntEnum):
     SMALL = 2
     MEDIUM = 3
     LARGE = 4
-    XLARGE = 6
+    XLARGE = 5
 
 
 ZONE_SIZE_TO_RADIUS = {

@@ -202,11 +202,15 @@ class ZoneManager:
 
     def add_tiny_scrap_near_carrier_and_calc_rally(
         self, carrier_mask: np.ndarray
-    ) -> None:
+    ) -> list[tuple]:
         """Adds a tiny scrap zone near the carrier, then uses this location to calculate a rally point for the carrier.
 
         Args:
             carrier_mask (np.ndarray): Mask of the carrier
+
+        Returns:
+            (x, z): Scrap zone location
+            (x, z): Rally point location
         """
         logger.info("Adding tiny scrap zone near carrier")
         # pick a zone subtype at random from ALLOWED_ZONE_SUBTYPES[ZoneType.SCRAP]
@@ -215,7 +219,7 @@ class ZoneManager:
         )
         # update the allowed max subtype zones to have 1 fewer
         ALLOWED_MAX_SUBTYPE_ZONES[ZoneType.SCRAP][zone_subtype] -= 1
-        zone = self.object_handler.add_zone(
+        zone: Zone = self.object_handler.add_zone(
             zone_manager=self,
             zone_type=ZoneType.SCRAP,
             zone_size=ZoneSize.TINY,
@@ -225,7 +229,12 @@ class ZoneManager:
 
         if zone is None:
             logger.warning("Failed to add tiny scrap zone near carrier")
-            return
+            # select a random point which is on land inside the zone
+            x, z = self.object_handler._find_location(
+                extra_masks=carrier_mask,
+            )
+            # rally and zone location are the same
+            return (x, z), (x, z)
 
         # create a custom mask within a radius of 15 of the new scrap zone
         nearby_scrap_mask = self.object_handler._update_mask_grid_with_radius(
@@ -236,12 +245,12 @@ class ZoneManager:
             set_to=1,
         )
         # find a location
-        x, z = self.object_handler._find_location(
+        xr, zr = self.object_handler._find_location(
             required_radius=4,
             consider_zones=True,
             extra_masks=nearby_scrap_mask,
         )
-        return x, z
+        return (zone.x, zone.z), (xr, zr)
 
     def create_zone(
         self,
