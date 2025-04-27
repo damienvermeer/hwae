@@ -143,11 +143,18 @@ def generate_new_map(
         zone_manager = ZoneManager(object_handler, noise_generator, zonegen_root)
 
         # starting scrap
-        xr, zr = zone_manager.add_tiny_scrap_near_carrier_and_calc_rally(carrier_mask)
-        logger.info("Adding map revealer")
-        object_handler.add_object_centered_on_zone(
-            "MapRevealer1", object_handler.zones[0]
+        # issue 7 - the below will return a random location within the mask if it
+        # ... cant fit a scrap zone, so place the revealer there regardless. it
+        # ... will really rarely be in the middle of an enemy base, but this will
+        # ... only happen if there isnt space for a tiny scrap zone
+        zone_coords, (xr, zr) = zone_manager.add_tiny_scrap_near_carrier_and_calc_rally(
+            carrier_mask
         )
+        logger.info("Adding map revealer")  # add at zone coords (which might also
+        # ... be an empty space if no zone could fit)
+        object_handler.add_object_at_coords("MapRevealer1", *zone_coords)
+        # and set rally point (which if no zone can fit is the same as the rally
+        # ... point coords)
         yr = terrain_handler.get_height(xr, zr)
         cfg_data["RallyPoint"] = f"{zr*10*51.7:.6f},{yr:.6f},{xr*10*51.7:.6f}"
 

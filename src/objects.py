@@ -435,7 +435,7 @@ class ObjectHandler:
         return None
 
     def add_carrier_and_return_mask(
-        self, required_radius: int = 30, mask_radius: int = 60
+        self, required_radius: int = 30, mask_radius: int = 70
     ) -> np.ndarray:
         """Finds a location for the carrier, by using a coast search with a large
         required radius, then adds the object directly (special as it also sets the
@@ -443,7 +443,7 @@ class ObjectHandler:
 
         Args:
             required_radius (int, optional): Required radius of the carrier. Defaults to 30.
-            mask_radius (int, optional): Radius of the mask. Defaults to 60.
+            mask_radius (int, optional): Radius of the mask. Defaults to 70.
 
         Returns:
             np.ndarray: Mask in the carrier's radius for placing extra objects/zones
@@ -779,20 +779,22 @@ class ObjectHandler:
             points.append((x, y, z))
         return points
 
-    def add_object_centered_on_zone(self, object_type: str, zone: ZoneMarker) -> int:
-        """Adds an object centered on the zone
+    def add_object_at_coords(
+        self, object_type: str, x: float, z: float, team: Team = Team.NEUTRAL
+    ) -> int:
+        """Adds an object at the specified coordinates
 
         Args:
             object_type (str): Type of object
-            zone (ZoneMarker): Zone object defining the location
+            x (float): X coordinate
+            z (float): Z coordinate
+            team (Team, optional): Team of the object. Defaults to Team.NEUTRAL.
 
         Returns:
-            int: The ID of the new object
+            int: ID of the new object
         """
-        x, z = zone.x, zone.z
-        y = self.terrain_handler.get_height(x, z)
-        self.ob3_interface.add_object(
+        return self.ob3_interface.add_object(
             object_type=object_type,
-            location=[x, y, z],
-            team=Team.NEUTRAL,
+            location=[x, self.terrain_handler.get_height(x, z), z],
+            team=team,
         )
