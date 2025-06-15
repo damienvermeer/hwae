@@ -166,7 +166,11 @@ class TerrainHandler:
         # ... of every point to 1
         for x in range(self.width):
             for y in range(self.length):
-                self.terrain_points[x, y].flags = 1  # 'TP_DRAW' mode
+                # issue 10 - use flags from other .lev files to minimise
+                # ... geometry corruption
+                self.terrain_points[x, y].flags = (
+                    74 if self.terrain_points[x, y].height < 50 else 21
+                )
                 # set each texture a random direction (gives some visual variety)
                 self.terrain_points[x, y].texture_dir = self.noise_gen.randint(0, 8)
 
@@ -194,7 +198,6 @@ class TerrainHandler:
             for y in range(self.length):
                 if self.terrain_points[x, y].height < -10:
                     self.terrain_points[x, y].mat = 0  # sea
-                    self.terrain_points[x, y].flags = 2  # 'TP_WET' mode
                 elif -10 <= self.terrain_points[x, y].height <= 80:
                     self.terrain_points[x, y].mat = 1  # shore
                 elif self.terrain_points[x, y].height > 0.8 * max_height:
