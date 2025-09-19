@@ -20,7 +20,6 @@ from fileio.ob3 import MAP_SCALER
 from noisegen import NoiseGenerator
 from zones.base_zone import Zone
 
-
 @dataclass
 class TerrainHandler:
     """Class for handling the terrain of the level"""
@@ -161,18 +160,35 @@ class TerrainHandler:
                 if self.terrain_points[x, y].height < -150:
                     self.terrain_points[x, y].height = -1500
 
-        # Step 5 - remove holes from appearing in the map by setting the flags
+        # Step 5 - set flags for each point (texture directions and coast flags)
         logger.info("Step 5: Setting terrain flags...")
-        # ... of every point to 1
+        
+        # Define flag constants
+        TP_WET = 0x01
+        TP_DRAW = 0x02  
+        TP_SHOREPOINT = 0x04
+        TP_DRYPOINT = 0x08
+        TP_WETPOINT = 0x10
+        
+        # Set base flags and wet/dry point flags for all points
         for x in range(self.width):
             for y in range(self.length):
-                # issue 10 - use flags from other .lev files to minimise
-                # ... geometry corruption
-                self.terrain_points[x, y].flags = (
-                    74 if self.terrain_points[x, y].height < 50 else 21
-                )
+                height = self.terrain_points[x, y].height
+                # Base flags + wet/dry point flags
+                # Below values taken from experiementation with other .lev files
+                self.terrain_points[x, y].flags = (74 if height < 50 else 21) | (TP_WETPOINT if height < 0 else TP_DRYPOINT)
                 # set each texture a random direction (gives some visual variety)
                 self.terrain_points[x, y].texture_dir = self.noise_gen.randint(0, 8)
+        
+        # Set square flags (wet/draw/shore) for all squares except edges
+        for x in range(self.width - 1):
+            for y in range(self.length - 1):
+                point = self.terrain_points[x, y]
+                heights = [self.terrain_points[x+dx, y+dy].height for dx in [0,1] for dy in [0,1]]
+                
+                if any(h > -30.0 for h in heights): point.flags |= TP_DRAW
+                if any(h < 0.0 for h in heights): point.flags |= TP_WET
+                if point.flags & (TP_WET | TP_DRAW) == (TP_WET | TP_DRAW): point.flags |= TP_SHOREPOINT
 
         # Step 6 - apply random map textures
         logger.info("Step 6: Applying terrain textures...")
